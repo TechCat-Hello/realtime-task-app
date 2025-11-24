@@ -5,29 +5,43 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
 
-  // 初期データ取得
   useEffect(() => {
-    axios.get("http://localhost:8000/api/tasks/")
-      .then((res) => {
-        setTasks(res.data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+    fetchTasks();
   }, []);
 
-  // Task追加処理
+  const fetchTasks = () => {
+    axios.get("http://localhost:8000/api/tasks/")
+      .then((res) => setTasks(res.data))
+      .catch((err) => console.error(err));
+  };
+
   const handleAddTask = () => {
-    if (!newTask) return;  // 未入力は無視
+    if (!newTask) return;
 
     axios.post("http://localhost:8000/api/tasks/", {
       title: newTask,
-      completed: false,
+      status: "todo", // <- ここを status で送る
     })
-      .then((res) => {
-        setTasks([...tasks, res.data]);  // 既存配列に追加
-        setNewTask("");  // 入力欄をリセット
-      })
+      .then(() => fetchTasks())
+      .catch((err) => console.error(err));
+
+    setNewTask("");
+  };
+
+  const toggleTask = (task) => {
+    // チェックボックスで status を切り替え
+    const newStatus = task.completed ? "in_progress" : "done";
+
+    axios.patch(`http://localhost:8000/api/tasks/${task.id}/`, {
+      status: newStatus, // <- ここを status で送る
+    })
+      .then(() => fetchTasks())
+      .catch((err) => console.error(err));
+  };
+
+  const deleteTask = (id) => {
+    axios.delete(`http://localhost:8000/api/tasks/${id}/`)
+      .then(() => fetchTasks())
       .catch((err) => console.error(err));
   };
 
@@ -35,22 +49,35 @@ function App() {
     <div style={{ padding: "20px" }}>
       <h1>Task List</h1>
 
-      {/* Task追加フォーム */}
       <div style={{ marginBottom: "20px" }}>
         <input
           type="text"
           value={newTask}
+          placeholder="New task..."
           onChange={(e) => setNewTask(e.target.value)}
-          placeholder="New Task..."
         />
         <button onClick={handleAddTask}>Add</button>
       </div>
 
-      {/* Task一覧 */}
       <ul>
         {tasks.map((task) => (
-          <li key={task.id}>
-            {task.title} - {task.completed ? "✔" : "✖"}
+          <li key={task.id} style={{ marginBottom: "10px" }}>
+            <input
+              type="checkbox"
+              checked={task.completed}
+              onChange={() => toggleTask(task)}
+              style={{ marginRight: "10px" }}
+            />
+            {task.title}
+            <span style={{ marginLeft: "10px", fontWeight: "bold" }}>
+              {task.completed ? "✔" : "✖"}
+            </span>
+            <button
+              onClick={() => deleteTask(task.id)}
+              style={{ marginLeft: "10px", color: "red" }}
+            >
+              Delete
+            </button>
           </li>
         ))}
       </ul>
@@ -59,3 +86,4 @@ function App() {
 }
 
 export default App;
+
