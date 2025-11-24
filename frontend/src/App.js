@@ -9,13 +9,12 @@ import {
   Card,
   CardContent,
   IconButton,
-  Box,
-  Divider
+  Box
 } from "@mui/material";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import HourglassBottomIcon from "@mui/icons-material/HourglassBottom"; // 進行中 ⏳
-import CheckCircleIcon from "@mui/icons-material/CheckCircle"; // 完了 ✔
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";          // 完了 ✔
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked"; // 未着手 ○
 
 function App() {
@@ -91,6 +90,19 @@ function App() {
     }
   };
 
+  const getCardColor = (status) => {
+    switch (status) {
+      case "todo":
+        return "#e0e0e0"; // Gray
+      case "in_progress":
+        return "#fff59d"; // Yellow
+      case "done":
+        return "#c8e6c9"; // Green
+      default:
+        return "white";
+    }
+  };
+
   return (
     <div style={{ padding: "20px", maxWidth: 700, margin: "0 auto" }}>
       <Typography variant="h4" gutterBottom align="center">
@@ -112,10 +124,16 @@ function App() {
         </Stack>
       </Card>
 
-      {/* タスクカード一覧 */}
+      {/* タスクカード */}
       <Stack spacing={2}>
         {tasks.map((task) => (
-          <Card key={task.id} sx={{ boxShadow: 3 }}>
+          <Card
+            key={task.id}
+            sx={{
+              backgroundColor: getCardColor(task.status),
+              boxShadow: 3,
+            }}
+          >
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Stack direction="row" alignItems="center" spacing={2}>
@@ -145,6 +163,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
