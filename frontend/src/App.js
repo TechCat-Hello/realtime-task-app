@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import {
+  TextField,
+  Button,
+  Checkbox,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+  Stack,
+  Typography
+} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 function App() {
   const [tasks, setTasks] = useState([]);
@@ -10,7 +22,8 @@ function App() {
   }, []);
 
   const fetchTasks = () => {
-    axios.get("http://localhost:8000/api/tasks/")
+    axios
+      .get("http://localhost:8000/api/tasks/")
       .then((res) => setTasks(res.data))
       .catch((err) => console.error(err));
   };
@@ -18,10 +31,11 @@ function App() {
   const handleAddTask = () => {
     if (!newTask) return;
 
-    axios.post("http://localhost:8000/api/tasks/", {
-      title: newTask,
-      status: "todo", // <- ここを status で送る
-    })
+    axios
+      .post("http://localhost:8000/api/tasks/", {
+        title: newTask,
+        status: "todo",
+      })
       .then(() => fetchTasks())
       .catch((err) => console.error(err));
 
@@ -29,61 +43,83 @@ function App() {
   };
 
   const toggleTask = (task) => {
-    // チェックボックスで status を切り替え
-    const newStatus = task.completed ? "in_progress" : "done";
+    const newStatus = task.status === "done" ? "todo" : "done";
 
-    axios.patch(`http://localhost:8000/api/tasks/${task.id}/`, {
-      status: newStatus, // <- ここを status で送る
-    })
+    axios
+      .patch(`http://localhost:8000/api/tasks/${task.id}/`, {
+        status: newStatus,
+      })
       .then(() => fetchTasks())
       .catch((err) => console.error(err));
   };
 
   const deleteTask = (id) => {
-    axios.delete(`http://localhost:8000/api/tasks/${id}/`)
+    axios
+      .delete(`http://localhost:8000/api/tasks/${id}/`)
       .then(() => fetchTasks())
       .catch((err) => console.error(err));
   };
 
-  return (
-    <div style={{ padding: "20px" }}>
-      <h1>Task List</h1>
+  const getStatusMark = (status) => {
+    switch (status) {
+      case "todo":
+      case "in_progress":
+        return "✖";
+      case "done":
+        return "✔";
+      default:
+        return "";
+    }
+  };
 
-      <div style={{ marginBottom: "20px" }}>
-        <input
-          type="text"
+  return (
+    <div style={{ padding: "20px", maxWidth: 600, margin: "0 auto" }}>
+      <Typography variant="h4" gutterBottom>
+        Task List
+      </Typography>
+
+      {/* 新規タスク追加 */}
+      <Stack direction="row" spacing={2} mb={3}>
+        <TextField
+          fullWidth
+          label="New Task"
           value={newTask}
-          placeholder="New task..."
           onChange={(e) => setNewTask(e.target.value)}
         />
-        <button onClick={handleAddTask}>Add</button>
-      </div>
+        <Button variant="contained" color="primary" onClick={handleAddTask}>
+          Add
+        </Button>
+      </Stack>
 
-      <ul>
+      {/* タスクリスト */}
+      <List>
         {tasks.map((task) => (
-          <li key={task.id} style={{ marginBottom: "10px" }}>
-            <input
-              type="checkbox"
-              checked={task.completed}
+          <ListItem
+            key={task.id}
+            divider
+            secondaryAction={
+              <IconButton edge="end" color="error" onClick={() => deleteTask(task.id)}>
+                <DeleteIcon />
+              </IconButton>
+            }
+          >
+            <Checkbox
+              checked={task.status === "done"}
               onChange={() => toggleTask(task)}
-              style={{ marginRight: "10px" }}
             />
-            {task.title}
-            <span style={{ marginLeft: "10px", fontWeight: "bold" }}>
-              {task.completed ? "✔" : "✖"}
-            </span>
-            <button
-              onClick={() => deleteTask(task.id)}
-              style={{ marginLeft: "10px", color: "red" }}
-            >
-              Delete
-            </button>
-          </li>
+            <ListItemText
+              primary={task.title}
+              secondary={getStatusMark(task.status)}
+            />
+          </ListItem>
         ))}
-      </ul>
+      </List>
     </div>
   );
 }
 
 export default App;
+
+
+
 
