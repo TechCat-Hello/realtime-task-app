@@ -11,7 +11,11 @@ import {
   Stack,
   Typography
 } from "@mui/material";
+
 import DeleteIcon from "@mui/icons-material/Delete";
+import HourglassBottomIcon from "@mui/icons-material/HourglassBottom"; // 進行中 ⏳
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";          // 完了 ✔
+import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked"; // 未着手 ○
 
 function App() {
   const [tasks, setTasks] = useState([]);
@@ -42,12 +46,14 @@ function App() {
     setNewTask("");
   };
 
+  // --- 3段階ステータス切替 ---
   const toggleTask = (task) => {
-    const newStatus = task.status === "done" ? "todo" : "done";
+    const order = ["todo", "in_progress", "done"];
+    const nextStatus = order[(order.indexOf(task.status) + 1) % order.length];
 
     axios
       .patch(`http://localhost:8000/api/tasks/${task.id}/`, {
-        status: newStatus,
+        status: nextStatus,
       })
       .then(() => fetchTasks())
       .catch((err) => console.error(err));
@@ -60,13 +66,14 @@ function App() {
       .catch((err) => console.error(err));
   };
 
-  const getStatusMark = (status) => {
+  const getStatusDisplay = (status) => {
     switch (status) {
       case "todo":
+        return <> <RadioButtonUncheckedIcon style={{ marginRight: 4 }} /> To Do </>;
       case "in_progress":
-        return "✖";
+        return <> <HourglassBottomIcon style={{ marginRight: 4 }} /> In Progress </>;
       case "done":
-        return "✔";
+        return <> <CheckCircleIcon style={{ marginRight: 4 }} /> Done </>;
       default:
         return "";
     }
@@ -94,23 +101,22 @@ function App() {
       {/* タスクリスト */}
       <List>
         {tasks.map((task) => (
-          <ListItem
-            key={task.id}
-            divider
-            secondaryAction={
-              <IconButton edge="end" color="error" onClick={() => deleteTask(task.id)}>
-                <DeleteIcon />
-              </IconButton>
-            }
-          >
+          <ListItem key={task.id} divider>
             <Checkbox
               checked={task.status === "done"}
               onChange={() => toggleTask(task)}
             />
             <ListItemText
               primary={task.title}
-              secondary={getStatusMark(task.status)}
+              secondary={getStatusDisplay(task.status)}
             />
+            <IconButton
+              edge="end"
+              color="error"
+              onClick={() => deleteTask(task.id)}
+            >
+              <DeleteIcon />
+            </IconButton>
           </ListItem>
         ))}
       </List>
@@ -119,6 +125,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
