@@ -9,13 +9,20 @@ import {
   Card,
   CardContent,
   IconButton,
-  Box
+  Box,
+  Paper,
 } from "@mui/material";
 
 import DeleteIcon from "@mui/icons-material/Delete";
-import HourglassBottomIcon from "@mui/icons-material/HourglassBottom"; // 進行中 ⏳
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";          // 完了 ✔
-import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked"; // 未着手 ○
+import HourglassBottomIcon from "@mui/icons-material/HourglassBottom";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
+
+import {
+  DragDropContext,
+  Droppable,
+  Draggable
+} from "@hello-pangea/dnd";
 
 function App() {
   const [tasks, setTasks] = useState([]);
@@ -34,7 +41,6 @@ function App() {
 
   const handleAddTask = () => {
     if (!newTask) return;
-
     axios
       .post("http://localhost:8000/api/tasks/", {
         title: newTask,
@@ -69,42 +75,72 @@ function App() {
     switch (status) {
       case "todo":
         return (
-          <>
-            <RadioButtonUncheckedIcon sx={{ mr: 1 }} /> To Do
-          </>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <RadioButtonUncheckedIcon fontSize="small" />
+            <Typography variant="body2">To Do</Typography>
+          </Stack>
         );
       case "in_progress":
         return (
-          <>
-            <HourglassBottomIcon sx={{ mr: 1 }} /> In Progress
-          </>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <HourglassBottomIcon fontSize="small" />
+            <Typography variant="body2">In Progress</Typography>
+          </Stack>
         );
       case "done":
         return (
-          <>
-            <CheckCircleIcon sx={{ mr: 1 }} /> Done
-          </>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <CheckCircleIcon fontSize="small" />
+            <Typography variant="body2">Done</Typography>
+          </Stack>
         );
       default:
-        return "";
+        return null;
     }
   };
 
   const getCardColor = (status) => {
     switch (status) {
       case "todo":
-        return "#e0e0e0"; // Gray
+        return "#e0e0e0";
       case "in_progress":
-        return "#fff59d"; // Yellow
+        return "#fff59d";
       case "done":
-        return "#c8e6c9"; // Green
+        return "#c8e6c9";
       default:
         return "white";
     }
   };
 
+  // Kanban形式用のhandleDragEnd
+  const handleDragEnd = (result) => {
+    const { source, destination, draggableId } = result;
+    if (!destination) return;
+
+    const taskId = parseInt(draggableId);
+    const task = tasks.find((t) => t.id === taskId);
+
+    // 列を移動した場合はstatusを更新
+    const newStatus = destination.droppableId;
+
+    if (task.status !== newStatus) {
+      axios
+        .patch(`http://localhost:8000/api/tasks/${task.id}/`, {
+          status: newStatus,
+        })
+        .then(() => fetchTasks())
+        .catch((err) => console.error(err));
+    }
+  };
+
+  const columns = [
+    { id: "todo", title: "To Do" },
+    { id: "in_progress", title: "In Progress" },
+    { id: "done", title: "Done" },
+  ];
+
   return (
-    <div style={{ padding: "20px", maxWidth: 700, margin: "0 auto" }}>
+    <div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto" }}>
       <Typography variant="h4" gutterBottom align="center">
         Task Board
       </Typography>
@@ -124,45 +160,81 @@ function App() {
         </Stack>
       </Card>
 
-      {/* タスクカード */}
-      <Stack spacing={2}>
-        {tasks.map((task) => (
-          <Card
-            key={task.id}
-            sx={{
-              backgroundColor: getCardColor(task.status),
-              boxShadow: 3,
-            }}
-          >
-            <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <Checkbox
-                    checked={task.status === "done"}
-                    onChange={() => toggleTask(task)}
-                  />
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Stack direction="row" spacing={2} justifyContent="space-between">
+          {columns.map((column) => (
+            <Droppable key={column.id} droppableId={column.id}>
+              {(provided, snapshot) => (
+                <Paper
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  sx={{
+                    p: 2,
+                    flex: 1,
+                    minHeight: 500,
+                    backgroundColor: snapshot.isDraggingOver ? "#e3f2fd" : "#f5f5f5",
+                  }}
+                >
+                  <Typography variant="h6" align="center" sx={{ mb: 2 }}>
+                    {column.title}
+                  </Typography>
 
-                  <Box>
-                    <Typography variant="h6">{task.title}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {getStatusDisplay(task.status)}
-                    </Typography>
-                  </Box>
-                </Stack>
-
-                <IconButton color="error" onClick={() => deleteTask(task.id)}>
-                  <DeleteIcon />
-                </IconButton>
-              </Stack>
-            </CardContent>
-          </Card>
-        ))}
-      </Stack>
+                  {tasks
+                    .filter((task) => task.status === column.id)
+                    .map((task, index) => (
+                      <Draggable
+                        key={task.id}
+                        draggableId={String(task.id)}
+                        index={index}
+                      >
+                        {(provided) => (
+                          <Card
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            sx={{
+                              mb: 2,
+                              backgroundColor: getCardColor(task.status),
+                            }}
+                          >
+                            <CardContent>
+                              <Stack
+                                direction="row"
+                                justifyContent="space-between"
+                                alignItems="center"
+                              >
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                  <Checkbox
+                                    checked={task.status === "done"}
+                                    onChange={() => toggleTask(task)}
+                                  />
+                                  <Box>{getStatusDisplay(task.status)}</Box>
+                                  <Typography variant="body1">{task.title}</Typography>
+                                </Stack>
+                                <IconButton color="error" onClick={() => deleteTask(task.id)}>
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Stack>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </Draggable>
+                    ))}
+                  {provided.placeholder}
+                </Paper>
+              )}
+            </Droppable>
+          ))}
+        </Stack>
+      </DragDropContext>
     </div>
   );
 }
 
 export default App;
+
+
+
 
 
 
