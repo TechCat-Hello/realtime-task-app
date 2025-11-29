@@ -1,11 +1,12 @@
 version: '3.8'
+
 services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_DB=rt_tasks
-      - POSTGRES_USER=rt_user
-      - POSTGRES_PASSWORD=rt_password
+      POSTGRES_DB: rt_tasks
+      POSTGRES_USER: rt_user
+      POSTGRES_PASSWORD: rt_password
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
@@ -20,14 +21,28 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_HOST=db
-      - POSTGRES_DB=rt_tasks
-      - POSTGRES_USER=rt_user
-      - POSTGRES_PASSWORD=rt_password   # <- ここを修正
+      DATABASE_HOST: db
+      POSTGRES_DB: rt_tasks
+      POSTGRES_USER: rt_user
+      POSTGRES_PASSWORD: rt_password
     depends_on:
       - db
 
+  frontend:
+    build:
+      context: ./frontend
+    command: sh -c "npm install && npm start"
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    environment:
+      CHOKIDAR_USEPOLLING: "true"  # WindowsやWSLでホットリロードを有効化
+    depends_on:
+      - backend
+
 volumes:
   db_data:
+
 
 
