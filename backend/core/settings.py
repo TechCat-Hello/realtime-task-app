@@ -33,21 +33,20 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',  # ★ 必ず一番上 or staticfiles より前
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
     'corsheaders',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'tasks',
 ]
 
-INSTALLED_APPS += [
-    "rest_framework",
-    "rest_framework_simplejwt",
-    "channels",
-    "tasks",
-]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
