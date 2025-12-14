@@ -18,36 +18,58 @@ import HourglassBottomIcon from "@mui/icons-material/HourglassBottom";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 
-import {
-  DragDropContext,
-  Droppable,
-  Draggable
-} from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 function App() {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
 
+  /* =========================
+     初回ロード（REST）
+  ========================= */
   useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const fetchTasks = () => {
     axios
       .get("http://localhost:8000/api/tasks/")
       .then((res) => setTasks(res.data))
-      .catch((err) => console.error(err));
-  };
+      .catch(console.error);
+  }, []);
 
+  /* =========================
+     WebSocket（同期専用）
+  ========================= */
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8000/ws/tasks/");
+
+    ws.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+
+      if (data.type === "task_update") {
+        setTasks((prev) => {
+          const exists = prev.find((t) => t.id === data.task.id);
+          return exists
+            ? prev.map((t) => (t.id === data.task.id ? data.task : t))
+            : [...prev, data.task];
+        });
+      }
+
+      if (data.type === "task_delete") {
+        setTasks((prev) => prev.filter((t) => t.id !== data.task_id));
+      }
+    };
+
+    return () => ws.close();
+  }, []);
+
+  /* =========================
+     CRUD（Optimistic）
+  ========================= */
   const handleAddTask = () => {
     if (!newTask) return;
-    axios
-      .post("http://localhost:8000/api/tasks/", {
-        title: newTask,
-        status: "todo",
-      })
-      .then(() => fetchTasks())
-      .catch((err) => console.error(err));
+
+    axios.post("http://localhost:8000/api/tasks/", {
+      title: newTask,
+      status: "todo",
+    });
 
     setNewTask("");
   };
@@ -56,42 +78,48 @@ function App() {
     const order = ["todo", "in_progress", "done"];
     const nextStatus = order[(order.indexOf(task.status) + 1) % order.length];
 
-    axios
-      .patch(`http://localhost:8000/api/tasks/${task.id}/`, {
-        status: nextStatus,
-      })
-      .then(() => fetchTasks())
-      .catch((err) => console.error(err));
+    // 即時UI更新
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === task.id ? { ...t, status: nextStatus } : t
+      )
+    );
+
+    axios.patch(`http://localhost:8000/api/tasks/${task.id}/`, {
+      status: nextStatus,
+    });
   };
 
   const deleteTask = (id) => {
-    axios
-      .delete(`http://localhost:8000/api/tasks/${id}/`)
-      .then(() => fetchTasks())
-      .catch((err) => console.error(err));
+    // 即時UI更新
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    axios.delete(`http://localhost:8000/api/tasks/${id}/`);
   };
 
+  /* =========================
+     表示用
+  ========================= */
   const getStatusDisplay = (status) => {
     switch (status) {
       case "todo":
         return (
-          <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Stack direction="row" spacing={0.5}>
             <RadioButtonUncheckedIcon fontSize="small" />
-            <Typography variant="body2">To Do</Typography>
+            <Typography>To Do</Typography>
           </Stack>
         );
       case "in_progress":
         return (
-          <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Stack direction="row" spacing={0.5}>
             <HourglassBottomIcon fontSize="small" />
-            <Typography variant="body2">In Progress</Typography>
+            <Typography>In Progress</Typography>
           </Stack>
         );
       case "done":
         return (
-          <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Stack direction="row" spacing={0.5}>
             <CheckCircleIcon fontSize="small" />
-            <Typography variant="body2">Done</Typography>
+            <Typography>Done</Typography>
           </Stack>
         );
       default:
@@ -100,37 +128,33 @@ function App() {
   };
 
   const getCardColor = (status) => {
-    switch (status) {
-      case "todo":
-        return "#e0e0e0";
-      case "in_progress":
-        return "#fff59d";
-      case "done":
-        return "#c8e6c9";
-      default:
-        return "white";
-    }
+    if (status === "todo") return "#e0e0e0";
+    if (status === "in_progress") return "#fff59d";
+    if (status === "done") return "#c8e6c9";
+    return "white";
   };
 
-  // Kanban形式用のhandleDragEnd
+  /* =========================
+     DnD（Optimistic）
+  ========================= */
   const handleDragEnd = (result) => {
-    const { source, destination, draggableId } = result;
+    const { destination, draggableId } = result;
     if (!destination) return;
 
     const taskId = parseInt(draggableId);
-    const task = tasks.find((t) => t.id === taskId);
 
-    // 列を移動した場合はstatusを更新
-    const newStatus = destination.droppableId;
+    // 即時UI更新
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, status: destination.droppableId }
+          : t
+      )
+    );
 
-    if (task.status !== newStatus) {
-      axios
-        .patch(`http://localhost:8000/api/tasks/${task.id}/`, {
-          status: newStatus,
-        })
-        .then(() => fetchTasks())
-        .catch((err) => console.error(err));
-    }
+    axios.patch(`http://localhost:8000/api/tasks/${taskId}/`, {
+      status: destination.droppableId,
+    });
   };
 
   const columns = [
@@ -140,12 +164,11 @@ function App() {
   ];
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto" }}>
-      <Typography variant="h4" gutterBottom align="center">
+    <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
+      <Typography variant="h4" align="center" gutterBottom>
         Task Board
       </Typography>
 
-      {/* 新規タスク追加 */}
       <Card sx={{ mb: 3, p: 2 }}>
         <Stack direction="row" spacing={2}>
           <TextField
@@ -154,33 +177,28 @@ function App() {
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
           />
-          <Button variant="contained" color="primary" onClick={handleAddTask}>
+          <Button variant="contained" onClick={handleAddTask}>
             Add
           </Button>
         </Stack>
       </Card>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Stack direction="row" spacing={2} justifyContent="space-between">
+        <Stack direction="row" spacing={2}>
           {columns.map((column) => (
             <Droppable key={column.id} droppableId={column.id}>
-              {(provided, snapshot) => (
+              {(provided) => (
                 <Paper
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  sx={{
-                    p: 2,
-                    flex: 1,
-                    minHeight: 500,
-                    backgroundColor: snapshot.isDraggingOver ? "#e3f2fd" : "#f5f5f5",
-                  }}
+                  sx={{ p: 2, flex: 1, minHeight: 500 }}
                 >
-                  <Typography variant="h6" align="center" sx={{ mb: 2 }}>
+                  <Typography align="center" sx={{ mb: 2 }}>
                     {column.title}
                   </Typography>
 
                   {tasks
-                    .filter((task) => task.status === column.id)
+                    .filter((t) => t.status === column.id)
                     .map((task, index) => (
                       <Draggable
                         key={task.id}
@@ -192,26 +210,22 @@ function App() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            sx={{
-                              mb: 2,
-                              backgroundColor: getCardColor(task.status),
-                            }}
+                            sx={{ mb: 2, backgroundColor: getCardColor(task.status) }}
                           >
                             <CardContent>
                               <Stack
                                 direction="row"
                                 justifyContent="space-between"
-                                alignItems="center"
                               >
-                                <Stack direction="row" alignItems="center" spacing={1}>
+                                <Stack direction="row" spacing={1}>
                                   <Checkbox
                                     checked={task.status === "done"}
                                     onChange={() => toggleTask(task)}
                                   />
-                                  <Box>{getStatusDisplay(task.status)}</Box>
-                                  <Typography variant="body1">{task.title}</Typography>
+                                  {getStatusDisplay(task.status)}
+                                  <Typography>{task.title}</Typography>
                                 </Stack>
-                                <IconButton color="error" onClick={() => deleteTask(task.id)}>
+                                <IconButton onClick={() => deleteTask(task.id)}>
                                   <DeleteIcon />
                                 </IconButton>
                               </Stack>
@@ -232,13 +246,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
-
-
-
-
