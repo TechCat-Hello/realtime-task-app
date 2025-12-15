@@ -3,13 +3,11 @@ import axios from "axios";
 import {
   TextField,
   Button,
-  Checkbox,
   Stack,
   Typography,
   Card,
   CardContent,
   IconButton,
-  Box,
   Paper,
 } from "@mui/material";
 
@@ -25,7 +23,7 @@ function App() {
   const [newTask, setNewTask] = useState("");
 
   /* =========================
-     初回ロード（REST）
+     初回ロード
   ========================= */
   useEffect(() => {
     axios
@@ -35,7 +33,7 @@ function App() {
   }, []);
 
   /* =========================
-     WebSocket（同期専用）
+     WebSocket（最重要）
   ========================= */
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8000/ws/tasks/");
@@ -55,106 +53,82 @@ function App() {
       if (data.type === "task_delete") {
         setTasks((prev) => prev.filter((t) => t.id !== data.task_id));
       }
+
+      // ✅ 並び替えは必ずこれで反映
+      if (data.type === "task_bulk_update") {
+        setTasks(data.tasks);
+      }
     };
 
     return () => ws.close();
   }, []);
 
   /* =========================
-     CRUD（Optimistic）
+     追加
   ========================= */
   const handleAddTask = () => {
     if (!newTask) return;
 
+    const order = tasks.filter((t) => t.status === "todo").length;
+
     axios.post("http://localhost:8000/api/tasks/", {
       title: newTask,
       status: "todo",
+      order,
     });
 
     setNewTask("");
   };
 
-  const toggleTask = (task) => {
-    const order = ["todo", "in_progress", "done"];
-    const nextStatus = order[(order.indexOf(task.status) + 1) % order.length];
-
-    // 即時UI更新
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === task.id ? { ...t, status: nextStatus } : t
-      )
-    );
-
-    axios.patch(`http://localhost:8000/api/tasks/${task.id}/`, {
-      status: nextStatus,
-    });
-  };
-
   const deleteTask = (id) => {
-    // 即時UI更新
-    setTasks((prev) => prev.filter((t) => t.id !== id));
     axios.delete(`http://localhost:8000/api/tasks/${id}/`);
   };
 
   /* =========================
-     表示用
-  ========================= */
-  const getStatusDisplay = (status) => {
-    switch (status) {
-      case "todo":
-        return (
-          <Stack direction="row" spacing={0.5}>
-            <RadioButtonUncheckedIcon fontSize="small" />
-            <Typography>To Do</Typography>
-          </Stack>
-        );
-      case "in_progress":
-        return (
-          <Stack direction="row" spacing={0.5}>
-            <HourglassBottomIcon fontSize="small" />
-            <Typography>In Progress</Typography>
-          </Stack>
-        );
-      case "done":
-        return (
-          <Stack direction="row" spacing={0.5}>
-            <CheckCircleIcon fontSize="small" />
-            <Typography>Done</Typography>
-          </Stack>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const getCardColor = (status) => {
-    if (status === "todo") return "#e0e0e0";
-    if (status === "in_progress") return "#fff59d";
-    if (status === "done") return "#c8e6c9";
-    return "white";
-  };
-
-  /* =========================
-     DnD（Optimistic）
+     DnD（★ここが最大の修正点）
   ========================= */
   const handleDragEnd = (result) => {
     const { destination, draggableId } = result;
     if (!destination) return;
 
-    const taskId = parseInt(draggableId);
+    const taskId = Number(draggableId);
 
-    // 即時UI更新
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? { ...t, status: destination.droppableId }
-          : t
-      )
-    );
+    // ❌ setTasks しない！
+    // ❌ 並び替えロジックを書かない！
 
-    axios.patch(`http://localhost:8000/api/tasks/${taskId}/`, {
+    axios.post("http://localhost:8000/api/tasks/reorder/", {
+      task_id: taskId,
       status: destination.droppableId,
+      order: destination.index,
     });
+  };
+
+  /* =========================
+     表示
+  ========================= */
+  const getStatusDisplay = (status) => {
+    if (status === "todo")
+      return (
+        <Stack direction="row" spacing={0.5}>
+          <RadioButtonUncheckedIcon fontSize="small" />
+          <Typography>To Do</Typography>
+        </Stack>
+      );
+    if (status === "in_progress")
+      return (
+        <Stack direction="row" spacing={0.5}>
+          <HourglassBottomIcon fontSize="small" />
+          <Typography>In Progress</Typography>
+        </Stack>
+      );
+    if (status === "done")
+      return (
+        <Stack direction="row" spacing={0.5}>
+          <CheckCircleIcon fontSize="small" />
+          <Typography>Done</Typography>
+        </Stack>
+      );
+    return null;
   };
 
   const columns = [
@@ -199,6 +173,7 @@ function App() {
 
                   {tasks
                     .filter((t) => t.status === column.id)
+                    .sort((a, b) => a.order - b.order)
                     .map((task, index) => (
                       <Draggable
                         key={task.id}
@@ -210,7 +185,7 @@ function App() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            sx={{ mb: 2, backgroundColor: getCardColor(task.status) }}
+                            sx={{ mb: 2 }}
                           >
                             <CardContent>
                               <Stack
@@ -218,14 +193,12 @@ function App() {
                                 justifyContent="space-between"
                               >
                                 <Stack direction="row" spacing={1}>
-                                  <Checkbox
-                                    checked={task.status === "done"}
-                                    onChange={() => toggleTask(task)}
-                                  />
                                   {getStatusDisplay(task.status)}
                                   <Typography>{task.title}</Typography>
                                 </Stack>
-                                <IconButton onClick={() => deleteTask(task.id)}>
+                                <IconButton
+                                  onClick={() => deleteTask(task.id)}
+                                >
                                   <DeleteIcon />
                                 </IconButton>
                               </Stack>

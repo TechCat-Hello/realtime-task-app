@@ -26,7 +26,8 @@ router.register(r'tasks', TaskViewSet, basename='task')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("api/", include("tasks.urls")),
     #path('api/', include('tasks.urls')),  # tasks.urls の '' が api/ にマッピング
-    path('api/', include(router.urls)),
+    #path('api/', include(router.urls)),
     path('', views.home),  # ルート URL
 ]

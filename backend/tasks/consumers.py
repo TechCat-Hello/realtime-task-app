@@ -1,3 +1,4 @@
+# tasks/consumers.py
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
@@ -24,17 +25,23 @@ class TaskConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
-    # 追加・更新
+    # 単体更新
     async def task_update(self, event):
         await self.send(text_data=json.dumps({
             "type": "task_update",
             "task": event["task"]
         }))
 
-    # ★ 削除（これが無かった）
+    # 削除
     async def task_delete(self, event):
         await self.send(text_data=json.dumps({
             "type": "task_delete",
             "task_id": event["task_id"]
         }))
 
+    # ✅ 並び替え用（超重要）
+    async def task_bulk_update(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "task_bulk_update",
+            "tasks": event["tasks"]
+        }))
