@@ -18,6 +18,15 @@ import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
+/* =========================
+   ★ status → カード色
+========================= */
+const TASK_COLORS = {
+  todo: "#e3f2fd",        // 薄い青
+  in_progress: "#fff9c4", // 薄い黄色
+  done: "#e8f5e9",        // 薄い緑
+};
+
 function App() {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
@@ -54,7 +63,7 @@ function App() {
         setTasks((prev) => prev.filter((t) => t.id !== data.task_id));
       }
 
-      // ✅ 並び替えは必ずこれで反映
+      // 並び替えは必ずこれで反映
       if (data.type === "task_bulk_update") {
         setTasks(data.tasks);
       }
@@ -85,16 +94,13 @@ function App() {
   };
 
   /* =========================
-     DnD（★ここが最大の修正点）
+     DnD（サーバーに任せる）
   ========================= */
   const handleDragEnd = (result) => {
     const { destination, draggableId } = result;
     if (!destination) return;
 
     const taskId = Number(draggableId);
-
-    // ❌ setTasks しない！
-    // ❌ 並び替えロジックを書かない！
 
     axios.post("http://localhost:8000/api/tasks/reorder/", {
       task_id: taskId,
@@ -104,7 +110,7 @@ function App() {
   };
 
   /* =========================
-     表示
+     表示用
   ========================= */
   const getStatusDisplay = (status) => {
     if (status === "todo")
@@ -185,7 +191,11 @@ function App() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            sx={{ mb: 2 }}
+                            sx={{
+                              mb: 2,
+                              backgroundColor:
+                                TASK_COLORS[task.status], // ★status別色分け
+                            }}
                           >
                             <CardContent>
                               <Stack
@@ -219,3 +229,4 @@ function App() {
 }
 
 export default App;
+
