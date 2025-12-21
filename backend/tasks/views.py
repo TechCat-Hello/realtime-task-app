@@ -33,7 +33,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     # CRUD
     # =========================
     def perform_create(self, serializer):
-        # ★ 作成者を必ず紐付ける
         task = serializer.save(user=self.request.user)
         self.broadcast_task_update(task)
 
@@ -43,11 +42,14 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         task_id = instance.id
+        user_id = instance.user.id
         instance.delete()
 
         channel_layer = get_channel_layer()
+        group_name = f"tasks_user_{user_id}"
+
         async_to_sync(channel_layer.group_send)(
-            "tasks",
+            group_name,
             {
                 "type": "task_delete",
                 "task_id": task_id,
@@ -79,7 +81,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             task = Task.objects.select_for_update().get(id=task_id)
 
-            # 🔐 自分のタスク以外は操作不可（管理者除く）
+            # 🔐 権限制御（管理者 or 本人のみ）
             if not (request.user.is_staff or task.user == request.user):
                 return Response(
                     {"error": "permission denied"},
@@ -117,8 +119,8 @@ class TaskViewSet(viewsets.ModelViewSet):
                 t.order = i + 1 if i >= new_order else i
                 t.save()
 
-        # 🔴 並び替えは全件同期
-        self.broadcast_all_tasks()
+        # 🔴 並び替え後は「その user のみ」同期
+        self.broadcast_all_tasks_for_user(task.user)
 
         return Response({"status": "ok"})
 
@@ -127,23 +129,27 @@ class TaskViewSet(viewsets.ModelViewSet):
     # =========================
     def broadcast_task_update(self, task):
         channel_layer = get_channel_layer()
+        group_name = f"tasks_user_{task.user.id}"
+
         async_to_sync(channel_layer.group_send)(
-            "tasks",
+            group_name,
             {
                 "type": "task_update",
                 "task": TaskSerializer(task).data,
             }
         )
 
-    def broadcast_all_tasks(self):
+    def broadcast_all_tasks_for_user(self, user):
         channel_layer = get_channel_layer()
+        group_name = f"tasks_user_{user.id}"
+
         tasks = TaskSerializer(
-            self.get_queryset(),
+            Task.objects.filter(user=user).order_by("status", "order"),
             many=True
         ).data
 
         async_to_sync(channel_layer.group_send)(
-            "tasks",
+            group_name,
             {
                 "type": "task_bulk_update",
                 "tasks": tasks,
