@@ -1,8 +1,7 @@
-# tasks/views.py
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 
 from django.db import transaction
 
@@ -14,14 +13,28 @@ from channels.layers import get_channel_layer
 
 
 class TaskViewSet(viewsets.ModelViewSet):
-    queryset = Task.objects.all().order_by("order")
     serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    # =========================
+    # 取得制御（★最重要）
+    # =========================
+    def get_queryset(self):
+        user = self.request.user
+
+        # 管理者は全件
+        if user.is_staff or user.is_superuser:
+            return Task.objects.all().order_by("status", "order")
+
+        # 一般ユーザーは自分のタスクのみ
+        return Task.objects.filter(user=user).order_by("status", "order")
 
     # =========================
     # CRUD
     # =========================
     def perform_create(self, serializer):
-        task = serializer.save()
+        # ★ 作成者を必ず紐付ける
+        task = serializer.save(user=self.request.user)
         self.broadcast_task_update(task)
 
     def perform_update(self, serializer):
@@ -65,25 +78,31 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         with transaction.atomic():
             task = Task.objects.select_for_update().get(id=task_id)
+
+            # 🔐 自分のタスク以外は操作不可（管理者除く）
+            if not (request.user.is_staff or task.user == request.user):
+                return Response(
+                    {"error": "permission denied"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
             old_status = task.status
 
-            # 元の列
             old_tasks = (
                 Task.objects
-                .filter(status=old_status)
+                .filter(user=task.user, status=old_status)
                 .exclude(id=task_id)
                 .order_by("order")
             )
 
-            # 移動先の列
             new_tasks = (
                 Task.objects
-                .filter(status=new_status)
+                .filter(user=task.user, status=new_status)
                 .exclude(id=task_id)
                 .order_by("order")
             )
 
-            # 元の列を詰め直す
+            # 元の列を詰める
             for i, t in enumerate(old_tasks):
                 t.order = i
                 t.save()
@@ -98,7 +117,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 t.order = i + 1 if i >= new_order else i
                 t.save()
 
-        # 🔴 並び替えは「全件同期」が正解
+        # 🔴 並び替えは全件同期
         self.broadcast_all_tasks()
 
         return Response({"status": "ok"})
@@ -119,7 +138,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     def broadcast_all_tasks(self):
         channel_layer = get_channel_layer()
         tasks = TaskSerializer(
-            Task.objects.all().order_by("status", "order"),
+            self.get_queryset(),
             many=True
         ).data
 

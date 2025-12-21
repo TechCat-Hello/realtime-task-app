@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth.models import User
+
 
 class Task(models.Model):
     STATUS_CHOICES = [
@@ -7,6 +9,13 @@ class Task(models.Model):
         ("done", "Done"),
     ]
 
+    # ★ 追加：タスクの所有者
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="tasks"
+    )
+
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     status = models.CharField(
@@ -14,7 +23,7 @@ class Task(models.Model):
         choices=STATUS_CHOICES,
         default="todo",
     )
-    order = models.IntegerField(default=0)  # ← 追加: 列内の順序を管理
+    order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
