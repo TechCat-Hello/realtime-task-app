@@ -10,6 +10,7 @@ import {
   CardContent,
   IconButton,
   Paper,
+  Box,
 } from "@mui/material";
 
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -20,7 +21,7 @@ import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 /* =========================
-   status → カード色
+   カード背景色（薄）
 ========================= */
 const TASK_COLORS = {
   todo: "#e3f2fd",
@@ -28,19 +29,36 @@ const TASK_COLORS = {
   done: "#e8f5e9",
 };
 
+/* =========================
+   ステータスバー（濃）
+========================= */
+const STATUS_CONFIG = {
+  todo: {
+    color: "#2196f3",
+    icon: <RadioButtonUncheckedIcon fontSize="small" />,
+  },
+  in_progress: {
+    color: "#f9a825",
+    icon: <HourglassBottomIcon fontSize="small" />,
+  },
+  done: {
+    color: "#2e7d32",
+    icon: <CheckCircleIcon fontSize="small" />,
+  },
+};
+
 function TaskList({ onLogout }) {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
 
   /* =========================
-     初回ロード（JWT付き）
+     初回ロード
   ========================= */
   useEffect(() => {
     api
       .get("tasks/")
       .then((res) => setTasks(res.data))
-      .catch((err) => {
-        console.error(err);
+      .catch(() => {
         onLogout();
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
@@ -57,12 +75,11 @@ function TaskList({ onLogout }) {
       const data = JSON.parse(e.data);
 
       if (data.type === "task_update") {
-        setTasks((prev) => {
-          const exists = prev.find((t) => t.id === data.task.id);
-          return exists
+        setTasks((prev) =>
+          prev.some((t) => t.id === data.task.id)
             ? prev.map((t) => (t.id === data.task.id ? data.task : t))
-            : [...prev, data.task];
-        });
+            : [...prev, data.task]
+        );
       }
 
       if (data.type === "task_delete") {
@@ -94,53 +111,63 @@ function TaskList({ onLogout }) {
     setNewTask("");
   };
 
-  /* =========================
-     削除
-  ========================= */
   const deleteTask = (id) => {
     api.delete(`tasks/${id}/`);
   };
 
   /* =========================
-     並び替え
+     ✅ 完全修正版 Drag処理
   ========================= */
   const handleDragEnd = (result) => {
-    const { destination, draggableId } = result;
+    const { destination, source, draggableId } = result;
     if (!destination) return;
 
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    const taskId = Number(draggableId);
+
+    setTasks((prev) => {
+      const all = [...prev];
+      const movedTask = all.find((t) => t.id === taskId);
+      if (!movedTask) return prev;
+
+      const sourceTasks = all
+        .filter((t) => t.status === source.droppableId && t.id !== taskId)
+        .sort((a, b) => a.order - b.order);
+
+      const destinationTasks =
+        source.droppableId === destination.droppableId
+          ? sourceTasks
+          : all
+              .filter((t) => t.status === destination.droppableId)
+              .sort((a, b) => a.order - b.order);
+
+      destinationTasks.splice(destination.index, 0, {
+        ...movedTask,
+        status: destination.droppableId,
+      });
+
+      destinationTasks.forEach((t, i) => (t.order = i));
+      sourceTasks.forEach((t, i) => (t.order = i));
+
+      return all.map((t) => {
+        const updated =
+          destinationTasks.find((d) => d.id === t.id) ||
+          sourceTasks.find((s) => s.id === t.id);
+        return updated ? { ...t, ...updated } : t;
+      });
+    });
+
     api.post("tasks/reorder/", {
-      task_id: Number(draggableId),
+      task_id: taskId,
       status: destination.droppableId,
       order: destination.index,
     });
-  };
-
-  /* =========================
-     表示用
-  ========================= */
-  const getStatusDisplay = (status) => {
-    if (status === "todo")
-      return (
-        <Stack direction="row" spacing={0.5}>
-          <RadioButtonUncheckedIcon fontSize="small" />
-          <Typography>To Do</Typography>
-        </Stack>
-      );
-    if (status === "in_progress")
-      return (
-        <Stack direction="row" spacing={0.5}>
-          <HourglassBottomIcon fontSize="small" />
-          <Typography>In Progress</Typography>
-        </Stack>
-      );
-    if (status === "done")
-      return (
-        <Stack direction="row" spacing={0.5}>
-          <CheckCircleIcon fontSize="small" />
-          <Typography>Done</Typography>
-        </Stack>
-      );
-    return null;
   };
 
   const columns = [
@@ -153,14 +180,7 @@ function TaskList({ onLogout }) {
     <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
       <Stack direction="row" justifyContent="space-between" mb={2}>
         <Typography variant="h4">Task Board</Typography>
-        <Button
-          color="error"
-          onClick={() => {
-            localStorage.removeItem("accessToken");
-            localStorage.removeItem("refreshToken");
-            onLogout();
-          }}
-        >
+        <Button color="error" onClick={onLogout}>
           Logout
         </Button>
       </Stack>
@@ -196,53 +216,66 @@ function TaskList({ onLogout }) {
                   {tasks
                     .filter((t) => t.status === column.id)
                     .sort((a, b) => a.order - b.order)
-                    .map((task, index) => (
-                      <Draggable
-                        key={task.id}
-                        draggableId={String(task.id)}
-                        index={index}
-                      >
-                        {(provided) => (
-                          <Card
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            sx={{
-                              mb: 2,
-                              backgroundColor: TASK_COLORS[task.status],
-                            }}
-                          >
-                            <CardContent>
-                              <Stack
-                                direction="row"
-                                justifyContent="space-between"
-                              >
-                                {/* 👇 ユーザー名を表示 */}
-                                <Stack spacing={0.5}>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
+                    .map((task, index) => {
+                      const status = STATUS_CONFIG[task.status];
+
+                      return (
+                        <Draggable
+                          key={task.id}
+                          draggableId={String(task.id)}
+                          index={index}
+                        >
+                          {(provided) => (
+                            <Card
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              sx={{
+                                mb: 2,
+                                backgroundColor: TASK_COLORS[task.status],
+                                overflow: "hidden",
+                              }}
+                            >
+                              <CardContent sx={{ p: 0 }}>
+                                <Stack direction="row" alignItems="stretch">
+                                  <Box
+                                    sx={{
+                                      width: 48,
+                                      backgroundColor: status.color,
+                                      color: "#fff",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
                                   >
-                                    @{task.username}
-                                  </Typography>
+                                    {status.icon}
+                                  </Box>
 
-                                  <Stack direction="row" spacing={1}>
-                                    {getStatusDisplay(task.status)}
-                                    <Typography>{task.title}</Typography>
+                                  <Stack sx={{ p: 2, flexGrow: 1 }}>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      @{task.username}
+                                    </Typography>
+                                    <Typography fontWeight={500}>
+                                      {task.title}
+                                    </Typography>
                                   </Stack>
-                                </Stack>
 
-                                <IconButton
-                                  onClick={() => deleteTask(task.id)}
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </Stack>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </Draggable>
-                    ))}
+                                  <IconButton
+                                    onClick={() => deleteTask(task.id)}
+                                    size="small"
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Stack>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </Draggable>
+                      );
+                    })}
 
                   {provided.placeholder}
                 </Paper>
