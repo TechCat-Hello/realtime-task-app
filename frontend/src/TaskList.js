@@ -41,7 +41,6 @@ function TaskList({ onLogout }) {
       .then((res) => setTasks(res.data))
       .catch((err) => {
         console.error(err);
-        // トークン切れなど → ログアウト
         onLogout();
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
@@ -218,10 +217,21 @@ function TaskList({ onLogout }) {
                                 direction="row"
                                 justifyContent="space-between"
                               >
-                                <Stack direction="row" spacing={1}>
-                                  {getStatusDisplay(task.status)}
-                                  <Typography>{task.title}</Typography>
+                                {/* 👇 ユーザー名を表示 */}
+                                <Stack spacing={0.5}>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    @{task.username}
+                                  </Typography>
+
+                                  <Stack direction="row" spacing={1}>
+                                    {getStatusDisplay(task.status)}
+                                    <Typography>{task.title}</Typography>
+                                  </Stack>
                                 </Stack>
+
                                 <IconButton
                                   onClick={() => deleteTask(task.id)}
                                 >
@@ -246,3 +256,4 @@ function TaskList({ onLogout }) {
 }
 
 export default TaskList;
+
