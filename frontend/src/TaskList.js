@@ -87,7 +87,12 @@ function TaskList({ onLogout }) {
       }
 
       if (data.type === "task_bulk_update") {
-        setTasks(data.tasks);
+        // 既存のタスクを保持しつつ、受信したタスクで更新
+        setTasks((prev) => {
+          const updatedTaskIds = new Set(data.tasks.map(t => t.id));
+          const unchanged = prev.filter(t => !updatedTaskIds.has(t.id));
+          return [...unchanged, ...data.tasks];
+        });
       }
     };
 
@@ -292,5 +297,4 @@ function TaskList({ onLogout }) {
 }
 
 export default TaskList;
-
 
