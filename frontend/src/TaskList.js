@@ -236,16 +236,19 @@ function TaskList({ onLogout }) {
                                 overflow: "hidden",
                               }}
                             >
-                              <CardContent sx={{ p: 0 }}>
+                              <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
                                 <Stack direction="row" alignItems="stretch">
                                   <Box
                                     sx={{
+                                      minWidth: 48,
                                       width: 48,
+                                      flexShrink: 0,
                                       backgroundColor: status.color,
                                       color: "#fff",
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "center",
+                                      alignSelf: "stretch",
                                     }}
                                   >
                                     {status.icon}
@@ -289,4 +292,5 @@ function TaskList({ onLogout }) {
 }
 
 export default TaskList;
+
 
