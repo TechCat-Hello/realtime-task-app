@@ -11,23 +11,16 @@ from .serializers import TaskSerializer
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-
 class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated]
 
     # =========================
-    # 取得制御（★最重要）
+    # 取得制御（全員全タスク表示）
     # =========================
     def get_queryset(self):
-        user = self.request.user
-
-        # 管理者は全件
-        if user.is_staff or user.is_superuser:
-            return Task.objects.all().order_by("status", "order")
-
-        # 一般ユーザーは自分のタスクのみ
-        return Task.objects.filter(user=user).order_by("status", "order")
+        # 全員（管理者・一般ユーザー共通）で全タスク表示
+        return Task.objects.all().order_by("status", "order")
 
     # =========================
     # CRUD
@@ -42,14 +35,12 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         task_id = instance.id
-        user_id = instance.user.id
         instance.delete()
 
+        # ✅ 全員共通グループに通知
         channel_layer = get_channel_layer()
-        group_name = f"tasks_user_{user_id}"
-
         async_to_sync(channel_layer.group_send)(
-            group_name,
+            "tasks_all",
             {
                 "type": "task_delete",
                 "task_id": task_id,
@@ -119,37 +110,34 @@ class TaskViewSet(viewsets.ModelViewSet):
                 t.order = i + 1 if i >= new_order else i
                 t.save()
 
-        # 🔴 並び替え後は「その user のみ」同期
-        self.broadcast_all_tasks_for_user(task.user)
+        # ✅ 全員に全タスクを同期
+        self.broadcast_all_tasks()
 
         return Response({"status": "ok"})
 
     # =========================
-    # WebSocket helpers
+    # WebSocket helpers（全員共通）
     # =========================
     def broadcast_task_update(self, task):
         channel_layer = get_channel_layer()
-        group_name = f"tasks_user_{task.user.id}"
-
         async_to_sync(channel_layer.group_send)(
-            group_name,
+            "tasks_all",  # ✅ 全員共通グループ
             {
                 "type": "task_update",
                 "task": TaskSerializer(task).data,
             }
         )
 
-    def broadcast_all_tasks_for_user(self, user):
+    def broadcast_all_tasks(self):
+        """全員に全タスクを通知（新設）"""
         channel_layer = get_channel_layer()
-        group_name = f"tasks_user_{user.id}"
-
         tasks = TaskSerializer(
-            Task.objects.filter(user=user).order_by("status", "order"),
+            Task.objects.all().order_by("status", "order"),  # ✅ 全タスク
             many=True
         ).data
 
         async_to_sync(channel_layer.group_send)(
-            group_name,
+            "tasks_all",  # ✅ 全員共通グループ
             {
                 "type": "task_bulk_update",
                 "tasks": tasks,

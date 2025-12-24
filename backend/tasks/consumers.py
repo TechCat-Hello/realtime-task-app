@@ -1,7 +1,6 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-
 class TaskConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         user = self.scope["user"]
@@ -11,8 +10,8 @@ class TaskConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        # ✅ user ごとの group
-        self.group_name = f"tasks_user_{user.id}"
+        # ✅ 全員共通グループに変更（これが重要！）
+        self.group_name = "tasks_all"
 
         await self.channel_layer.group_add(
             self.group_name,
@@ -24,7 +23,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
         # （デバッグ用・あってもなくてもOK）
         await self.send(text_data=json.dumps({
             "type": "connection",
-            "message": f"connected as user {user.id}"
+            "message": f"connected to tasks_all as user {user.id}"
         }))
 
     async def disconnect(self, close_code):
@@ -59,3 +58,4 @@ class TaskConsumer(AsyncWebsocketConsumer):
             "type": "task_bulk_update",
             "tasks": event["tasks"]
         }))
+
