@@ -20,31 +20,16 @@ import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
-/* =========================
-   カード背景色（薄）
-========================= */
 const TASK_COLORS = {
   todo: "#e3f2fd",
   in_progress: "#fff9c4",
   done: "#e8f5e9",
 };
 
-/* =========================
-   ステータスバー（濃）
-========================= */
 const STATUS_CONFIG = {
-  todo: {
-    color: "#2196f3",
-    icon: <RadioButtonUncheckedIcon fontSize="small" />,
-  },
-  in_progress: {
-    color: "#f9a825",
-    icon: <HourglassBottomIcon fontSize="small" />,
-  },
-  done: {
-    color: "#2e7d32",
-    icon: <CheckCircleIcon fontSize="small" />,
-  },
+  todo: { color: "#2196f3", icon: <RadioButtonUncheckedIcon fontSize="small" /> },
+  in_progress: { color: "#f9a825", icon: <HourglassBottomIcon fontSize="small" /> },
+  done: { color: "#2e7d32", icon: <CheckCircleIcon fontSize="small" /> },
 };
 
 function TaskList({ onLogout }) {
@@ -56,9 +41,6 @@ function TaskList({ onLogout }) {
 
   const me = localStorage.getItem("username");
 
-  // =========================
-  // 初回ロード
-  // =========================
   useEffect(() => {
     api
       .get("tasks/")
@@ -70,9 +52,6 @@ function TaskList({ onLogout }) {
       });
   }, [onLogout]);
 
-  // =========================
-  // WebSocket
-  // =========================
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8000/ws/tasks/");
 
@@ -103,9 +82,6 @@ function TaskList({ onLogout }) {
     return () => ws.close();
   }, []);
 
-  // =========================
-  // 追加
-  // =========================
   const handleAddTask = () => {
     if (!newTask) return;
 
@@ -124,28 +100,20 @@ function TaskList({ onLogout }) {
     api.delete(`tasks/${id}/`);
   };
 
-  // =========================
-  // タイトル保存
-  // =========================
   const saveTitle = (task) => {
     if (!editingTitle.trim()) {
       setEditingId(null);
       return;
     }
 
-    api
-      .put(`tasks/${task.id}/`, {
-        ...task,
-        title: editingTitle,
-      })
-      .catch(() => alert("このタスクは編集できません"));
+    api.put(`tasks/${task.id}/`, {
+      ...task,
+      title: editingTitle,
+    });
 
     setEditingId(null);
   };
 
-  // =========================
-  // Drag & Drop
-  // =========================
   const handleDragEnd = (result) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
@@ -305,7 +273,10 @@ function TaskList({ onLogout }) {
                                       <Typography
                                         fontWeight={500}
                                         onClick={() => {
-                                          if (task.username !== me) return;
+                                          if (task.username !== me) {
+                                            alert("このタスクは編集できません");
+                                            return;
+                                          }
                                           setEditingId(task.id);
                                           setEditingTitle(task.title);
                                         }}
@@ -347,4 +318,5 @@ function TaskList({ onLogout }) {
 }
 
 export default TaskList;
+
 
