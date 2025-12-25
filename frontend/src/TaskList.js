@@ -40,7 +40,11 @@ function TaskList({ onLogout }) {
   const [editingTitle, setEditingTitle] = useState("");
 
   const me = localStorage.getItem("username");
+  const isAdmin = localStorage.getItem("is_staff") === "true";
 
+  // =========================
+  // 初回ロード
+  // =========================
   useEffect(() => {
     api
       .get("tasks/")
@@ -52,6 +56,9 @@ function TaskList({ onLogout }) {
       });
   }, [onLogout]);
 
+  // =========================
+  // WebSocket
+  // =========================
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8000/ws/tasks/");
 
@@ -82,6 +89,9 @@ function TaskList({ onLogout }) {
     return () => ws.close();
   }, []);
 
+  // =========================
+  // 追加
+  // =========================
   const handleAddTask = () => {
     if (!newTask) return;
 
@@ -100,20 +110,30 @@ function TaskList({ onLogout }) {
     api.delete(`tasks/${id}/`);
   };
 
+  // =========================
+  // タイトル保存
+  // =========================
   const saveTitle = (task) => {
     if (!editingTitle.trim()) {
       setEditingId(null);
       return;
     }
 
-    api.put(`tasks/${task.id}/`, {
-      ...task,
-      title: editingTitle,
-    });
+    api
+      .put(`tasks/${task.id}/`, {
+        ...task,
+        title: editingTitle,
+      })
+      .catch(() => {
+        alert("このタスクは編集できません");
+      });
 
     setEditingId(null);
   };
 
+  // =========================
+  // Drag & Drop
+  // =========================
   const handleDragEnd = (result) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
@@ -125,7 +145,22 @@ function TaskList({ onLogout }) {
       return;
 
     const taskId = Number(draggableId);
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
 
+    // ----------- ① 一般ユーザー：自分以外 → 移動不可 ---------
+    if (!isAdmin && task.username !== me) {
+      alert("このタスクは移動できません");
+      return;
+    }
+
+    // ----------- ② 管理者：同じカラムのみ OK ---------------
+    if (isAdmin && source.droppableId !== destination.droppableId) {
+      alert("管理者は同じステータス内のみ移動できます");
+      return;
+    }
+
+    // ===== フロント側の並び替え反映 =====
     setTasks((prev) => {
       const all = [...prev];
       const movedTask = all.find((t) => t.id === taskId);
@@ -158,11 +193,16 @@ function TaskList({ onLogout }) {
       });
     });
 
-    api.post("tasks/reorder/", {
-      task_id: taskId,
-      status: destination.droppableId,
-      order: destination.index,
-    });
+    // ===== サーバーへ送信 =====
+    api
+      .post("tasks/reorder/", {
+        task_id: taskId,
+        status: destination.droppableId,
+        order: destination.index,
+      })
+      .catch(() => {
+        alert("このタスクは移動できません");
+      });
   };
 
   const columns = [
@@ -231,9 +271,7 @@ function TaskList({ onLogout }) {
                                 overflow: "hidden",
                               }}
                             >
-                              <CardContent
-                                sx={{ p: 0, "&:last-child": { pb: 0 } }}
-                              >
+                              <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
                                 <Stack direction="row" alignItems="stretch">
                                   <Box
                                     sx={{
@@ -263,9 +301,7 @@ function TaskList({ onLogout }) {
                                       <TextField
                                         value={editingTitle}
                                         size="small"
-                                        onChange={(e) =>
-                                          setEditingTitle(e.target.value)
-                                        }
+                                        onChange={(e) => setEditingTitle(e.target.value)}
                                         onBlur={() => saveTitle(task)}
                                         autoFocus
                                       />
@@ -318,5 +354,7 @@ function TaskList({ onLogout }) {
 }
 
 export default TaskList;
+
+
 
 

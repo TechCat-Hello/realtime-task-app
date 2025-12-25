@@ -17,48 +17,33 @@ class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated]
 
-    # =========================
-    # 取得（全員 → 全タスク表示）
-    # =========================
     def get_queryset(self):
         return Task.objects.all().order_by("status", "order")
 
-    # =========================
-    # 作成
-    # =========================
     def perform_create(self, serializer):
         task = serializer.save(user=self.request.user)
         self.broadcast_task_update(task)
 
     # =========================
-    # 更新（★ title は作成者だけ）
+    # 更新（title は作成者だけ）
     # =========================
     def perform_update(self, serializer):
         task = self.get_object()
         request_user = self.request.user
 
-        # いまの値
-        old_title = task.title
-
-        # 保存前にデータだけ取得
         validated = serializer.validated_data
 
-        # title が更新されようとしている？
         if "title" in validated:
-            new_title = validated["title"]
-
-            # 変更しようとしていて & 作成者でない
-            if new_title != old_title and task.user != request_user:
+            if task.user != request_user:
                 raise PermissionDenied(
                     "タスク名を変更できるのは作成者だけです。"
                 )
 
-        # それ以外はOK
         updated_task = serializer.save()
         self.broadcast_task_update(updated_task)
 
     # =========================
-    # 削除（★ 作成者だけ）
+    # 削除（作成者だけ）
     # =========================
     def perform_destroy(self, instance):
         if instance.user != self.request.user:
@@ -94,42 +79,52 @@ class TaskViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             task = Task.objects.select_for_update().get(id=task_id)
 
-            # 並び替えは「本人だけ」
-            if task.user != request.user:
-                return Response(
-                    {"error": "permission denied"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+            # -----------------------------
+            # ★ ここが重要
+            # 1. 本人 → OK
+            # 2. 管理者 → OK（ただし同じカラムのみ）
+            # 3. それ以外 → 403
+            # -----------------------------
+            is_owner = (task.user == request.user)
+            is_admin = request.user.is_staff
 
-            # int 変換（安全策）
+            # int へ変換
             new_order = int(new_order)
 
             old_status = task.status
 
-            old_tasks = (
+            # ★ 別カラムへ移動しようとした場合
+            if new_status != old_status:
+
+                # 管理者含めて「全員 NG」
+                return Response(
+                    {"error": "別のカラムへ移動することはできません。"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            # ★ 同じカラム内だけど
+            #   → 作成者ではなく & 管理者でもない
+            if not is_owner and not is_admin:
+                return Response(
+                    {"error": "他のユーザーのタスクは移動できません。"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            # -----------------------------
+            # 並び替え処理（同じカラムのみ）
+            # -----------------------------
+            tasks_same_column = (
                 Task.objects
-                .filter(user=task.user, status=old_status)
-                .exclude(id=task_id)
+                .filter(status=old_status)
                 .order_by("order")
             )
 
-            new_tasks = (
-                Task.objects
-                .filter(user=task.user, status=new_status)
-                .exclude(id=task_id)
-                .order_by("order")
-            )
+            tasks_same_column = [t for t in tasks_same_column if t.id != task.id]
 
-            for i, t in enumerate(old_tasks):
+            tasks_same_column.insert(new_order, task)
+
+            for i, t in enumerate(tasks_same_column):
                 t.order = i
-                t.save()
-
-            task.status = new_status
-            task.order = new_order
-            task.save()
-
-            for i, t in enumerate(new_tasks):
-                t.order = i + 1 if i >= new_order else i
                 t.save()
 
         self.broadcast_all_tasks()
