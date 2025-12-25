@@ -51,9 +51,14 @@ function TaskList({ onLogout }) {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
 
-  /* =========================
-     初回ロード
-  ========================= */
+  const [editingId, setEditingId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState("");
+
+  const me = localStorage.getItem("username");
+
+  // =========================
+  // 初回ロード
+  // =========================
   useEffect(() => {
     api
       .get("tasks/")
@@ -65,9 +70,9 @@ function TaskList({ onLogout }) {
       });
   }, [onLogout]);
 
-  /* =========================
-     WebSocket
-  ========================= */
+  // =========================
+  // WebSocket
+  // =========================
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8000/ws/tasks/");
 
@@ -87,10 +92,9 @@ function TaskList({ onLogout }) {
       }
 
       if (data.type === "task_bulk_update") {
-        // 既存のタスクを保持しつつ、受信したタスクで更新
         setTasks((prev) => {
-          const updatedTaskIds = new Set(data.tasks.map(t => t.id));
-          const unchanged = prev.filter(t => !updatedTaskIds.has(t.id));
+          const updatedTaskIds = new Set(data.tasks.map((t) => t.id));
+          const unchanged = prev.filter((t) => !updatedTaskIds.has(t.id));
           return [...unchanged, ...data.tasks];
         });
       }
@@ -99,9 +103,9 @@ function TaskList({ onLogout }) {
     return () => ws.close();
   }, []);
 
-  /* =========================
-     追加
-  ========================= */
+  // =========================
+  // 追加
+  // =========================
   const handleAddTask = () => {
     if (!newTask) return;
 
@@ -120,9 +124,28 @@ function TaskList({ onLogout }) {
     api.delete(`tasks/${id}/`);
   };
 
-  /* =========================
-     ✅ 完全修正版 Drag処理
-  ========================= */
+  // =========================
+  // タイトル保存
+  // =========================
+  const saveTitle = (task) => {
+    if (!editingTitle.trim()) {
+      setEditingId(null);
+      return;
+    }
+
+    api
+      .put(`tasks/${task.id}/`, {
+        ...task,
+        title: editingTitle,
+      })
+      .catch(() => alert("このタスクは編集できません"));
+
+    setEditingId(null);
+  };
+
+  // =========================
+  // Drag & Drop
+  // =========================
   const handleDragEnd = (result) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
@@ -130,9 +153,8 @@ function TaskList({ onLogout }) {
     if (
       destination.droppableId === source.droppableId &&
       destination.index === source.index
-    ) {
+    )
       return;
-    }
 
     const taskId = Number(draggableId);
 
@@ -241,7 +263,9 @@ function TaskList({ onLogout }) {
                                 overflow: "hidden",
                               }}
                             >
-                              <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
+                              <CardContent
+                                sx={{ p: 0, "&:last-child": { pb: 0 } }}
+                              >
                                 <Stack direction="row" alignItems="stretch">
                                   <Box
                                     sx={{
@@ -266,9 +290,35 @@ function TaskList({ onLogout }) {
                                     >
                                       @{task.username}
                                     </Typography>
-                                    <Typography fontWeight={500}>
-                                      {task.title}
-                                    </Typography>
+
+                                    {editingId === task.id ? (
+                                      <TextField
+                                        value={editingTitle}
+                                        size="small"
+                                        onChange={(e) =>
+                                          setEditingTitle(e.target.value)
+                                        }
+                                        onBlur={() => saveTitle(task)}
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <Typography
+                                        fontWeight={500}
+                                        onClick={() => {
+                                          if (task.username !== me) return;
+                                          setEditingId(task.id);
+                                          setEditingTitle(task.title);
+                                        }}
+                                        style={{
+                                          cursor:
+                                            task.username === me
+                                              ? "pointer"
+                                              : "default",
+                                        }}
+                                      >
+                                        {task.title}
+                                      </Typography>
+                                    )}
                                   </Stack>
 
                                   <IconButton

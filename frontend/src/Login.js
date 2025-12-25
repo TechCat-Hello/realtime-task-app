@@ -23,6 +23,8 @@ function Login({ onLogin }) {
 
       localStorage.setItem("accessToken", res.data.access);
       localStorage.setItem("refreshToken", res.data.refresh);
+      // ★ 追加：ログインしたユーザー名を保存
+      localStorage.setItem("username", username);
 
       onLogin(); // ログイン成功通知
     } catch (err) {
