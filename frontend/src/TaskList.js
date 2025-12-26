@@ -233,8 +233,16 @@ function TaskList({ onLogout }) {
     { id: "done", title: "Done" },
   ];
 
+  // 集計: Statusごとの件数（レンダリングごとに計算）
+  const statusCounts = {
+    todo: tasks.filter((t) => t.status === "todo").length,
+    in_progress: tasks.filter((t) => t.status === "in_progress").length,
+    done: tasks.filter((t) => t.status === "done").length,
+  };
+  const totalCount = statusCounts.todo + statusCounts.in_progress + statusCounts.done;
+
   return (
-    <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ padding: "12px 16px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
       <Stack direction="row" justifyContent="space-between" mb={2}>
         <Typography variant="h4">Task Board</Typography>
         <Button color="error" onClick={onLogout}>
@@ -257,14 +265,15 @@ function TaskList({ onLogout }) {
       </Card>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Stack direction="row" spacing={2}>
-          {columns.map((column) => (
+        <Stack direction="row" spacing={2} alignItems="stretch" sx={{ width: '100%' }}>
+          <Stack direction="row" spacing={2} sx={{ flex: '1 1 0' }}>
+            {columns.map((column) => (
             <Droppable key={column.id} droppableId={column.id}>
               {(provided) => (
                 <Paper
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  sx={{ p: 2, flex: 1, minHeight: 500 }}
+                  sx={{ p: 2, flex: '1 1 0', minHeight: 500 }}
                 >
                   <Typography align="center" sx={{ mb: 2 }}>
                     {column.title}
@@ -368,7 +377,33 @@ function TaskList({ onLogout }) {
                 </Paper>
               )}
             </Droppable>
-          ))}
+            ))}
+          </Stack>
+
+          {/* サイドバー: Status別の棒グラフ */}
+          <Paper sx={{ width: { xs: '100%', md: 320 }, p: 2, ml: { xs: 0, md: 1 } }}>
+            <Typography variant="h6" align="center" sx={{ mb: 1 }}>
+              Status Overview
+            </Typography>
+
+            {Object.keys(STATUS_CONFIG).map((key) => {
+              const count = statusCounts[key] || 0;
+              const percent = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
+              const conf = STATUS_CONFIG[key];
+              return (
+                <Box key={key} sx={{ mb: 2 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                    <Typography variant="subtitle2">{columns.find(c => c.id===key)?.title || key}</Typography>
+                    <Typography variant="caption">{count} ({percent}%)</Typography>
+                  </Stack>
+
+                  <Box sx={{ height: 12, backgroundColor: '#eee', borderRadius: 1, overflow: 'hidden' }}>
+                    <Box sx={{ height: '100%', width: `${percent}%`, backgroundColor: conf.color }} />
+                  </Box>
+                </Box>
+              );
+            })}
+          </Paper>
         </Stack>
       </DragDropContext>
     </div>
