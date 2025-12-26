@@ -35,6 +35,7 @@ const STATUS_CONFIG = {
 function TaskList({ onLogout }) {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
+  const [addError, setAddError] = useState("");
 
   const [editingId, setEditingId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -93,7 +94,10 @@ function TaskList({ onLogout }) {
   // 追加
   // =========================
   const handleAddTask = () => {
-    if (!newTask) return;
+    if (!newTask || !newTask.trim()) {
+      setAddError("タスク名を入力してください");
+      return;
+    }
 
     const order = tasks.filter((t) => t.status === "todo").length;
 
@@ -256,7 +260,12 @@ function TaskList({ onLogout }) {
             fullWidth
             label="New Task"
             value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
+            onChange={(e) => {
+              setNewTask(e.target.value);
+              if (addError) setAddError("");
+            }}
+            error={Boolean(addError)}
+            helperText={addError || ""}
           />
           <Button variant="contained" onClick={handleAddTask}>
             Add
