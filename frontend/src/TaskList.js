@@ -200,8 +200,16 @@ function TaskList({ onLogout }) {
         status: destination.droppableId,
         order: destination.index,
       })
-      .catch(() => {
-        alert("このタスクは移動できません");
+      .catch((err) => {
+        const msg =
+          err?.response?.data?.error ||
+          err?.response?.data?.detail ||
+          "";
+
+        // サーバーが本当にエラーのときだけ表示
+        if (msg) {
+          alert(msg);
+        }
       });
   };
 
@@ -354,6 +362,8 @@ function TaskList({ onLogout }) {
 }
 
 export default TaskList;
+
+
 
 
 

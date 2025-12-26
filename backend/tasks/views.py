@@ -24,9 +24,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         task = serializer.save(user=self.request.user)
         self.broadcast_task_update(task)
 
-    # =========================
-    # 更新（title は作成者だけ）
-    # =========================
     def perform_update(self, serializer):
         task = self.get_object()
         request_user = self.request.user
@@ -35,16 +32,11 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         if "title" in validated:
             if task.user != request_user:
-                raise PermissionDenied(
-                    "タスク名を変更できるのは作成者だけです。"
-                )
+                raise PermissionDenied("タスク名を変更できるのは作成者だけです。")
 
         updated_task = serializer.save()
         self.broadcast_task_update(updated_task)
 
-    # =========================
-    # 削除（作成者だけ）
-    # =========================
     def perform_destroy(self, instance):
         if instance.user != self.request.user:
             raise PermissionDenied("このタスクを削除できるのは作成者だけです。")
@@ -61,9 +53,6 @@ class TaskViewSet(viewsets.ModelViewSet):
             }
         )
 
-    # =========================
-    # 並び替え（Drag & Drop）
-    # =========================
     @action(detail=False, methods=["post"])
     def reorder(self, request):
         task_id = request.data.get("task_id")
@@ -79,48 +68,41 @@ class TaskViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             task = Task.objects.select_for_update().get(id=task_id)
 
-            # -----------------------------
-            # ★ ここが重要
-            # 1. 本人 → OK
-            # 2. 管理者 → OK（ただし同じカラムのみ）
-            # 3. それ以外 → 403
-            # -----------------------------
             is_owner = (task.user == request.user)
             is_admin = request.user.is_staff
 
-            # int へ変換
+            # ✔ ここで型をそろえる
+            new_status = int(new_status)
             new_order = int(new_order)
 
-            old_status = task.status
+            old_status = int(task.status)
 
-            # ★ 別カラムへ移動しようとした場合
-            if new_status != old_status:
-
-                # 管理者含めて「全員 NG」
-                return Response(
-                    {"error": "別のカラムへ移動することはできません。"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
-            # ★ 同じカラム内だけど
-            #   → 作成者ではなく & 管理者でもない
+            # 本人ではない & 管理者でもない
             if not is_owner and not is_admin:
                 return Response(
                     {"error": "他のユーザーのタスクは移動できません。"},
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-            # -----------------------------
-            # 並び替え処理（同じカラムのみ）
-            # -----------------------------
+            # 管理者が他人タスクを別カラムへ動かそうとしている場合のみ禁止
+            if is_admin and not is_owner and new_status != old_status:
+                return Response(
+                    {"error": "管理者でも、他のユーザーのタスクを別のカラムへは移動できません。"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            # ステータス更新
+            task.status = new_status
+            task.save()
+
+            # 並び順の再計算
             tasks_same_column = (
                 Task.objects
-                .filter(status=old_status)
+                .filter(status=new_status)
                 .order_by("order")
             )
 
             tasks_same_column = [t for t in tasks_same_column if t.id != task.id]
-
             tasks_same_column.insert(new_order, task)
 
             for i, t in enumerate(tasks_same_column):
@@ -130,9 +112,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         self.broadcast_all_tasks()
         return Response({"status": "ok"})
 
-    # =========================
-    # WebSocket helpers
-    # =========================
     def broadcast_task_update(self, task):
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
@@ -157,4 +136,5 @@ class TaskViewSet(viewsets.ModelViewSet):
                 "tasks": tasks,
             }
         )
+
 
