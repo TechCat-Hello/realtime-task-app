@@ -266,6 +266,12 @@ function TaskList({ onLogout }) {
             }}
             error={Boolean(addError)}
             helperText={addError || ""}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddTask();
+              }
+            }}
           />
           <Button variant="contained" onClick={handleAddTask}>
             Add
