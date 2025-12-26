@@ -107,7 +107,15 @@ function TaskList({ onLogout }) {
   };
 
   const deleteTask = (id) => {
-    api.delete(`tasks/${id}/`);
+    api
+      .delete(`tasks/${id}/`)
+      .catch((err) => {
+        const msg =
+          err?.response?.data?.detail ||
+          err?.response?.data?.error ||
+          "タスクを削除できません";
+        alert(msg);
+      });
   };
 
   // =========================

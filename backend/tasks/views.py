@@ -38,7 +38,10 @@ class TaskViewSet(viewsets.ModelViewSet):
         self.broadcast_task_update(updated_task)
 
     def perform_destroy(self, instance):
-        if instance.user != self.request.user:
+        is_owner = instance.user == self.request.user
+
+        # Only owner can delete (admin cannot delete other users' tasks)
+        if not is_owner:
             raise PermissionDenied("このタスクを削除できるのは作成者だけです。")
 
         task_id = instance.id
