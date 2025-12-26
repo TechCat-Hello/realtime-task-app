@@ -65,49 +65,65 @@ class TaskViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        with transaction.atomic():
-            task = Task.objects.select_for_update().get(id=task_id)
+        try:
+            with transaction.atomic():
+                task = Task.objects.select_for_update().get(id=task_id)
 
-            is_owner = (task.user == request.user)
-            is_admin = request.user.is_staff
+                is_owner = (task.user == request.user)
+                is_admin = request.user.is_staff
 
-            # ✔ ここで型をそろえる
-            new_status = int(new_status)
-            new_order = int(new_order)
+                # new_status should be one of the status keys (strings)
+                valid_statuses = [s[0] for s in Task.STATUS_CHOICES]
+                if new_status not in valid_statuses:
+                    return Response({"error": "invalid status"}, status=status.HTTP_400_BAD_REQUEST)
 
-            old_status = int(task.status)
+                try:
+                    new_order = int(new_order)
+                except (TypeError, ValueError):
+                    return Response({"error": "invalid order"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # 本人ではない & 管理者でもない
-            if not is_owner and not is_admin:
-                return Response(
-                    {"error": "他のユーザーのタスクは移動できません。"},
-                    status=status.HTTP_403_FORBIDDEN,
+                old_status = task.status
+
+                # 本人ではない & 管理者でもない
+                if not is_owner and not is_admin:
+                    return Response(
+                        {"error": "他のユーザーのタスクは移動できません。"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+                # 管理者が他人タスクを別カラムへ動かそうとしている場合のみ禁止
+                if is_admin and not is_owner and new_status != old_status:
+                    return Response(
+                        {"error": "管理者でも、他のユーザーのタスクを別のカラムへは移動できません。"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+                # ステータス更新
+                task.status = new_status
+                task.save()
+
+                # 並び順の再計算
+                tasks_same_column = (
+                    Task.objects
+                    .filter(status=new_status)
+                    .order_by("order")
                 )
 
-            # 管理者が他人タスクを別カラムへ動かそうとしている場合のみ禁止
-            if is_admin and not is_owner and new_status != old_status:
-                return Response(
-                    {"error": "管理者でも、他のユーザーのタスクを別のカラムへは移動できません。"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+                tasks_same_column = [t for t in tasks_same_column if t.id != task.id]
 
-            # ステータス更新
-            task.status = new_status
-            task.save()
+                # clamp new_order
+                if new_order < 0:
+                    new_order = 0
+                if new_order > len(tasks_same_column):
+                    new_order = len(tasks_same_column)
 
-            # 並び順の再計算
-            tasks_same_column = (
-                Task.objects
-                .filter(status=new_status)
-                .order_by("order")
-            )
+                tasks_same_column.insert(new_order, task)
 
-            tasks_same_column = [t for t in tasks_same_column if t.id != task.id]
-            tasks_same_column.insert(new_order, task)
-
-            for i, t in enumerate(tasks_same_column):
-                t.order = i
-                t.save()
+                for i, t in enumerate(tasks_same_column):
+                    t.order = i
+                    t.save()
+        except Task.DoesNotExist:
+            return Response({"error": "task not found"}, status=status.HTTP_404_NOT_FOUND)
 
         self.broadcast_all_tasks()
         return Response({"status": "ok"})
