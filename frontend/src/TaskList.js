@@ -148,17 +148,23 @@ function TaskList({ onLogout }) {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    // ----------- ① 一般ユーザー：自分以外 → 移動不可 ---------
-    if (!isAdmin && task.username !== me) {
+    // ========== ユーザー権限ロジック ==========
+    // オーナー (作成者) は自由に移動可能
+    const isOwner = task.username === me;
+
+    // オーナーでなく、かつ管理者でもない場合は移動不可
+    if (!isOwner && !isAdmin) {
       alert("このタスクは移動できません");
       return;
     }
 
-    // ----------- ② 管理者：同じカラムのみ OK ---------------
-    if (isAdmin && source.droppableId !== destination.droppableId) {
-      alert("管理者は同じステータス内のみ移動できます");
+    // 管理者が他ユーザーのタスクを別カラムへ移動しようとしている場合は不可
+    if (isAdmin && !isOwner && source.droppableId !== destination.droppableId) {
+      alert("管理者は他ユーザーのタスクを別ステータスへ移動できません");
       return;
     }
+
+    // ===== ここまで来たら移動OK =====
 
     // ===== フロント側の並び替え反映 =====
     setTasks((prev) => {

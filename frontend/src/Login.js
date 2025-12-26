@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import api from "./api";
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -25,6 +26,15 @@ function Login({ onLogin }) {
       localStorage.setItem("refreshToken", res.data.refresh);
       // ★ 追加：ログインしたユーザー名を保存
       localStorage.setItem("username", username);
+
+      // ★ 追加：サーバーから追加ユーザー情報（is_staff 等）を取得して保存
+      try {
+        const me = await api.get("me/");
+        localStorage.setItem("is_staff", String(me.data.is_staff));
+      } catch (err) {
+        // 失敗してもログイン自体は成功させる
+        console.warn("failed to fetch current user info", err);
+      }
 
       onLogin(); // ログイン成功通知
     } catch (err) {

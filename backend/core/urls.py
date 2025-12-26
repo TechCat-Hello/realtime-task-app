@@ -17,6 +17,9 @@ urlpatterns = [
     # API
     path("api/", include("tasks.urls")),
 
+    # Current user info (authenticated)
+    path("api/me/", views.current_user),
+
     # フロント用
     path("", views.home),
 ]
