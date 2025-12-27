@@ -21,6 +21,9 @@ urlpatterns = [
     path("api/me/", views.current_user),
     # User registration
     path("api/register/", views.register),
+    # Password reset
+    path("api/forgot-password/", views.forgot_password),
+    path("api/reset-password/", views.reset_password),
 
     # フロント用
     path("", views.home),

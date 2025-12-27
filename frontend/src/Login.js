@@ -26,10 +26,21 @@ function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [openSignUp, setOpenSignUp] = useState(false);
   const [signUsername, setSignUsername] = useState("");
+  const [signEmail, setSignEmail] = useState("");
   const [signPassword, setSignPassword] = useState("");
   const [signPasswordConfirm, setSignPasswordConfirm] = useState("");
   const [signError, setSignError] = useState("");
   const [signLoading, setSignLoading] = useState(false);
+
+  // Password reset state
+  const [openForgot, setOpenForgot] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1: enter email, 2: reset password
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotNewPasswordConfirm, setForgotNewPasswordConfirm] = useState("");
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -125,7 +136,16 @@ function Login({ onLogin }) {
 
             <Grid container justifyContent="space-between">
               <Grid item>
-                <Link href="#" variant="body2">
+                <Link
+                  component="button"
+                  variant="body2"
+                  onClick={() => {
+                    setOpenForgot(true);
+                    setForgotStep(1);
+                    setForgotError("");
+                    setForgotSuccess("");
+                  }}
+                >
                   パスワードを忘れた場合
                 </Link>
               </Grid>
@@ -162,6 +182,16 @@ function Login({ onLogin }) {
               margin="normal"
               required
               fullWidth
+              id="signup-email"
+              label="メールアドレス"
+              type="email"
+              value={signEmail}
+              onChange={(e) => setSignEmail(e.target.value)}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
               id="signup-password"
               label="パスワード"
               type="password"
@@ -187,8 +217,12 @@ function Login({ onLogin }) {
           <Button
             onClick={async () => {
               setSignError("");
-              if (!signUsername || !signPassword) {
-                setSignError("ユーザー名とパスワードを入力してください");
+              if (!signUsername || !signEmail || !signPassword) {
+                setSignError("ユーザー名、メール、パスワードを入力してください");
+                return;
+              }
+              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signEmail)) {
+                setSignError("有効なメールアドレスを入力してください");
                 return;
               }
               if (signPassword !== signPasswordConfirm) {
@@ -197,7 +231,7 @@ function Login({ onLogin }) {
               }
               setSignLoading(true);
               try {
-                await api.post("register/", { username: signUsername, password: signPassword });
+                await api.post("register/", { username: signUsername, email: signEmail, password: signPassword });
                 // 自動ログイン
                 const tokenRes = await api.post("token/", { username: signUsername, password: signPassword });
                 localStorage.setItem("accessToken", tokenRes.data.access);
@@ -222,6 +256,127 @@ function Login({ onLogin }) {
           >
             {signLoading ? "作成中..." : "アカウント作成"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={openForgot} onClose={() => setOpenForgot(false)}>
+        <DialogTitle>パスワードをリセット</DialogTitle>
+        <DialogContent>
+          {forgotError && <Alert severity="error">{forgotError}</Alert>}
+          {forgotSuccess && <Alert severity="success">{forgotSuccess}</Alert>}
+          <Box sx={{ mt: 1, width: 360 }}>
+            {forgotStep === 1 && (
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="forgot-email"
+                label="登録済みのメールアドレス"
+                type="email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+              />
+            )}
+            {forgotStep === 2 && (
+              <>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="forgot-new-password"
+                  label="新しいパスワード"
+                  type="password"
+                  value={forgotNewPassword}
+                  onChange={(e) => setForgotNewPassword(e.target.value)}
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="forgot-new-password-confirm"
+                  label="新しいパスワード（確認）"
+                  type="password"
+                  value={forgotNewPasswordConfirm}
+                  onChange={(e) => setForgotNewPasswordConfirm(e.target.value)}
+                />
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenForgot(false)} disabled={forgotLoading}>
+            キャンセル
+          </Button>
+          {forgotStep === 1 && (
+            <Button
+              onClick={async () => {
+                setForgotError("");
+                if (!forgotEmail) {
+                  setForgotError("メールアドレスを入力してください");
+                  return;
+                }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail)) {
+                  setForgotError("有効なメールアドレスを入力してください");
+                  return;
+                }
+                setForgotLoading(true);
+                try {
+                  // Verify email exists
+                  await api.post("forgot-password/", { email: forgotEmail });
+                  setForgotStep(2);
+                } catch (err) {
+                  const msg = err?.response?.data?.error || "エラーが発生しました";
+                  setForgotError(msg);
+                } finally {
+                  setForgotLoading(false);
+                }
+              }}
+              disabled={forgotLoading}
+              variant="contained"
+            >
+              次へ
+            </Button>
+          )}
+          {forgotStep === 2 && (
+            <Button
+              onClick={async () => {
+                setForgotError("");
+                if (!forgotNewPassword) {
+                  setForgotError("パスワードを入力してください");
+                  return;
+                }
+                if (forgotNewPassword !== forgotNewPasswordConfirm) {
+                  setForgotError("パスワードが一致しません");
+                  return;
+                }
+                setForgotLoading(true);
+                try {
+                  await api.post("reset-password/", {
+                    email: forgotEmail,
+                    new_password: forgotNewPassword,
+                  });
+                  setForgotSuccess("パスワードをリセットしました。ログインしてください。");
+                  setTimeout(() => {
+                    setOpenForgot(false);
+                    setForgotStep(1);
+                    setForgotEmail("");
+                    setForgotNewPassword("");
+                    setForgotNewPasswordConfirm("");
+                  }, 2000);
+                } catch (err) {
+                  const msg = err?.response?.data?.error || "パスワードのリセットに失敗しました";
+                  setForgotError(msg);
+                } finally {
+                  setForgotLoading(false);
+                }
+              }}
+              disabled={forgotLoading}
+              variant="contained"
+            >
+              {forgotLoading ? "リセット中..." : "パスワードをリセット"}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Container>
