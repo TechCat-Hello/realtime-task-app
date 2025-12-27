@@ -18,6 +18,8 @@ import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -41,6 +43,9 @@ function Login({ onLogin }) {
   const [forgotError, setForgotError] = useState("");
   const [forgotSuccess, setForgotSuccess] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
+
+  const theme = useTheme();
+  const fullScreenDialog = useMediaQuery(theme.breakpoints.down("sm"));
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -70,8 +75,8 @@ function Login({ onLogin }) {
   };
 
   return (
-    <Container component="main" maxWidth="xs" sx={{ mt: 8 }}>
-      <Paper elevation={6} sx={{ p: 4, borderRadius: 2 }}>
+    <Container component="main" maxWidth="xs" sx={{ mt: { xs: 4, sm: 8 } }}>
+      <Paper elevation={6} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2 }}>
         <Box
           sx={{
             display: "flex",
@@ -79,10 +84,10 @@ function Login({ onLogin }) {
             alignItems: "center",
           }}
         >
-          <Avatar sx={{ m: 1, bgcolor: "primary.main" }}>
-            <LockOutlinedIcon />
+          <Avatar sx={{ m: 1, bgcolor: "primary.main", width: { xs: 40, sm: 56 }, height: { xs: 40, sm: 56 } }}>
+            <LockOutlinedIcon sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }} />
           </Avatar>
-          <Typography component="h1" variant="h5">
+          <Typography component="h1" variant="h5" sx={{ mt: 1, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             サインイン
           </Typography>
 
@@ -164,11 +169,11 @@ function Login({ onLogin }) {
       </Paper>
 
       {/* Sign Up Dialog */}
-      <Dialog open={openSignUp} onClose={() => setOpenSignUp(false)}>
-        <DialogTitle>アカウント作成</DialogTitle>
+      <Dialog open={openSignUp} onClose={() => setOpenSignUp(false)} fullScreen={fullScreenDialog} maxWidth="xs">
+        <DialogTitle sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>アカウント作成</DialogTitle>
         <DialogContent>
           {signError && <Alert severity="error">{signError}</Alert>}
-          <Box sx={{ mt: 1, width: 360 }}>
+          <Box sx={{ mt: 1, width: { xs: "100%", sm: 360 } }}>
             <TextField
               margin="normal"
               required
@@ -260,12 +265,12 @@ function Login({ onLogin }) {
       </Dialog>
 
       {/* Forgot Password Dialog */}
-      <Dialog open={openForgot} onClose={() => setOpenForgot(false)}>
-        <DialogTitle>パスワードをリセット</DialogTitle>
+      <Dialog open={openForgot} onClose={() => setOpenForgot(false)} fullScreen={fullScreenDialog} maxWidth="xs">
+        <DialogTitle sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>パスワードをリセット</DialogTitle>
         <DialogContent>
           {forgotError && <Alert severity="error">{forgotError}</Alert>}
           {forgotSuccess && <Alert severity="success">{forgotSuccess}</Alert>}
-          <Box sx={{ mt: 1, width: 360 }}>
+          <Box sx={{ mt: 1, width: { xs: "100%", sm: 360 } }}>
             {forgotStep === 1 && (
               <TextField
                 margin="normal"

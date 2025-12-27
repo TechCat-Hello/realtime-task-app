@@ -246,16 +246,16 @@ function TaskList({ onLogout }) {
   const totalCount = statusCounts.todo + statusCounts.in_progress + statusCounts.done;
 
   return (
-    <div style={{ padding: "12px 16px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
-      <Stack direction="row" justifyContent="space-between" mb={2}>
-        <Typography variant="h4">Task Board</Typography>
-        <Button color="error" onClick={onLogout}>
+    <div style={{ padding: "8px 12px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+      <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" mb={2} spacing={1}>
+        <Typography variant="h4" sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>Task Board</Typography>
+        <Button color="error" onClick={onLogout} size="small">
           Logout
         </Button>
       </Stack>
 
-      <Card sx={{ mb: 3, p: 2 }}>
-        <Stack direction="row" spacing={2}>
+      <Card sx={{ mb: 3, p: { xs: 1.5, sm: 2 } }}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           <TextField
             fullWidth
             label="New Task"
@@ -272,25 +272,34 @@ function TaskList({ onLogout }) {
                 handleAddTask();
               }
             }}
+            size="small"
           />
-          <Button variant="contained" onClick={handleAddTask}>
+          <Button variant="contained" onClick={handleAddTask} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Add
           </Button>
         </Stack>
       </Card>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Stack direction="row" spacing={2} alignItems="stretch" sx={{ width: '100%' }}>
-          <Stack direction="row" spacing={2} sx={{ flex: '1 1 0' }}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="stretch" sx={{ width: '100%' }}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ flex: '1 1 0', width: '100%' }}>
             {columns.map((column) => (
             <Droppable key={column.id} droppableId={column.id}>
               {(provided) => (
                 <Paper
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  sx={{ p: 2, flex: '1 1 0', minHeight: 500 }}
+                  sx={{
+                    p: { xs: 1, sm: 2 },
+                    flex: '1 1 0',
+                    minHeight: { xs: 300, sm: 500 },
+                    // モバイルではカラム内をスクロール可能にする
+                    maxHeight: { xs: '60vh', sm: 'none' },
+                    overflowY: { xs: 'auto', sm: 'visible' },
+                    WebkitOverflowScrolling: { xs: 'touch', sm: 'auto' },
+                  }}
                 >
-                  <Typography align="center" sx={{ mb: 2 }}>
+                                  <Typography align="center" sx={{ mb: 2, fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                     {column.title}
                   </Typography>
 
@@ -312,7 +321,7 @@ function TaskList({ onLogout }) {
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
                               sx={{
-                                mb: 2,
+                                mb: 1,
                                 backgroundColor: TASK_COLORS[task.status],
                                 overflow: "hidden",
                               }}
@@ -321,8 +330,8 @@ function TaskList({ onLogout }) {
                                 <Stack direction="row" alignItems="stretch">
                                   <Box
                                     sx={{
-                                      minWidth: 48,
-                                      width: 48,
+                                      minWidth: { xs: 40, sm: 48 },
+                                      width: { xs: 40, sm: 48 },
                                       flexShrink: 0,
                                       backgroundColor: status.color,
                                       color: "#fff",
@@ -335,10 +344,11 @@ function TaskList({ onLogout }) {
                                     {status.icon}
                                   </Box>
 
-                                  <Stack sx={{ p: 2, flexGrow: 1 }}>
+                                  <Stack sx={{ p: { xs: 1, sm: 2 }, flexGrow: 1 }}>
                                     <Typography
                                       variant="caption"
                                       color="text.secondary"
+                                      sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
                                     >
                                       @{task.username}
                                     </Typography>
@@ -362,11 +372,13 @@ function TaskList({ onLogout }) {
                                           setEditingId(task.id);
                                           setEditingTitle(task.title);
                                         }}
-                                        style={{
+                                        sx={{
                                           cursor:
                                             task.username === me
                                               ? "pointer"
                                               : "default",
+                                          fontSize: { xs: "0.875rem", sm: "1rem" },
+                                          wordBreak: "break-word",
                                         }}
                                       >
                                         {task.title}
@@ -396,8 +408,8 @@ function TaskList({ onLogout }) {
           </Stack>
 
           {/* サイドバー: Status別の棒グラフ */}
-          <Paper sx={{ width: { xs: '100%', md: 320 }, p: 2, ml: { xs: 0, md: 1 } }}>
-            <Typography variant="h6" align="center" sx={{ mb: 1 }}>
+          <Paper sx={{ width: { xs: '100%', md: 320 }, p: { xs: 1.5, sm: 2 }, ml: { xs: 0, md: 1 }, order: { xs: -1, md: 0 } }}>
+            <Typography variant="h6" align="center" sx={{ mb: 1, fontSize: { xs: '0.95rem', sm: '1rem' } }}>
               Status Overview
             </Typography>
 
@@ -406,13 +418,13 @@ function TaskList({ onLogout }) {
               const percent = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
               const conf = STATUS_CONFIG[key];
               return (
-                <Box key={key} sx={{ mb: 2 }}>
+                <Box key={key} sx={{ mb: 1.5 }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
-                    <Typography variant="subtitle2">{columns.find(c => c.id===key)?.title || key}</Typography>
-                    <Typography variant="caption">{count} ({percent}%)</Typography>
+                    <Typography variant="subtitle2" sx={{ fontSize: { xs: '0.75rem', sm: '0.9rem' } }}>{columns.find(c => c.id===key)?.title || key}</Typography>
+                    <Typography variant="caption" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>{count} ({percent}%)</Typography>
                   </Stack>
 
-                  <Box sx={{ height: 12, backgroundColor: '#eee', borderRadius: 1, overflow: 'hidden' }}>
+                  <Box sx={{ height: { xs: 8, sm: 12 }, backgroundColor: '#eee', borderRadius: 1, overflow: 'hidden' }}>
                     <Box sx={{ height: '100%', width: `${percent}%`, backgroundColor: conf.color }} />
                   </Box>
                 </Box>
