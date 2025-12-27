@@ -26,6 +26,7 @@ services:
       POSTGRES_DB: rt_tasks
       POSTGRES_USER: rt_user
       POSTGRES_PASSWORD: rt_password
+      SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/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"
     depends_on:
       - db
 

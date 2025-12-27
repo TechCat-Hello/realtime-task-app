@@ -8,6 +8,7 @@ from django.db import transaction
 
 from .models import Task
 from .serializers import TaskSerializer
+from .slack_notifier import notify_task_created, notify_task_done, notify_task_title_updated
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -23,6 +24,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         task = serializer.save(user=self.request.user)
         self.broadcast_task_update(task)
+        # Slack 通知：タスク作成
+        notify_task_created(task)
 
     def perform_update(self, serializer):
         task = self.get_object()
@@ -33,8 +36,17 @@ class TaskViewSet(viewsets.ModelViewSet):
         if "title" in validated:
             if task.user != request_user:
                 raise PermissionDenied("タスク名を変更できるのは作成者だけです。")
+            # Slack 通知：タスク名編集
+            old_title = task.title
+            new_title = validated["title"]
+            notify_task_title_updated(old_title, new_title, request_user.username)
 
         updated_task = serializer.save()
+        
+        # Slack 通知：Status=Done への変更
+        if "status" in validated and validated["status"] == "done" and task.status != "done":
+            notify_task_done(updated_task)
+        
         self.broadcast_task_update(updated_task)
 
     def perform_destroy(self, instance):
