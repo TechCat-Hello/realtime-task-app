@@ -56,8 +56,15 @@ class TaskViewSet(viewsets.ModelViewSet):
         if not is_owner:
             raise PermissionDenied("このタスクを削除できるのは作成者だけです。")
 
+        # Slack 通知：タスク削除
+        task_title = instance.title
         task_id = instance.id
         instance.delete()
+
+        # Slack 通知を送信
+        from .slack_notifier import send_slack_notification
+        message = f"タスク「{task_title}」(ID: {task_id}) が削除されました。\n削除者: @{self.request.user.username}"
+        send_slack_notification(message, title="🗑️ タスク削除", color="#d32f2f")
 
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
