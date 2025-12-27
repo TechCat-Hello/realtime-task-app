@@ -117,6 +117,10 @@ class TaskViewSet(viewsets.ModelViewSet):
                 task.status = new_status
                 task.save()
 
+                # Slack 通知：Status=Done への変更
+                if new_status == "done" and old_status != "done":
+                    notify_task_done(task)
+
                 # 並び順の再計算
                 tasks_same_column = (
                     Task.objects
