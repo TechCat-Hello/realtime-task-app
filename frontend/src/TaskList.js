@@ -43,9 +43,6 @@ function TaskList({ onLogout }) {
   const me = localStorage.getItem("username");
   const isAdmin = localStorage.getItem("is_staff") === "true";
 
-  // =========================
-  // 初回ロード
-  // =========================
   useEffect(() => {
     api
       .get("tasks/")
@@ -57,9 +54,6 @@ function TaskList({ onLogout }) {
       });
   }, [onLogout]);
 
-  // =========================
-  // WebSocket
-  // =========================
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8000/ws/tasks/");
 
@@ -90,9 +84,6 @@ function TaskList({ onLogout }) {
     return () => ws.close();
   }, []);
 
-  // =========================
-  // 追加
-  // =========================
   const handleAddTask = () => {
     if (!newTask || !newTask.trim()) {
       setAddError("タスク名を入力してください");
@@ -122,9 +113,6 @@ function TaskList({ onLogout }) {
       });
   };
 
-  // =========================
-  // タイトル保存
-  // =========================
   const saveTitle = (task) => {
     if (!editingTitle.trim()) {
       setEditingId(null);
@@ -143,9 +131,6 @@ function TaskList({ onLogout }) {
     setEditingId(null);
   };
 
-  // =========================
-  // Drag & Drop
-  // =========================
   const handleDragEnd = (result) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
@@ -160,25 +145,18 @@ function TaskList({ onLogout }) {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    // ========== ユーザー権限ロジック ==========
-    // オーナー (作成者) は自由に移動可能
     const isOwner = task.username === me;
 
-    // オーナーでなく、かつ管理者でもない場合は移動不可
     if (!isOwner && !isAdmin) {
       alert("このタスクは移動できません");
       return;
     }
 
-    // 管理者が他ユーザーのタスクを別カラムへ移動しようとしている場合は不可
     if (isAdmin && !isOwner && source.droppableId !== destination.droppableId) {
       alert("管理者は他ユーザーのタスクを別ステータスへ移動できません");
       return;
     }
 
-    // ===== ここまで来たら移動OK =====
-
-    // ===== フロント側の並び替え反映 =====
     setTasks((prev) => {
       const all = [...prev];
       const movedTask = all.find((t) => t.id === taskId);
@@ -211,7 +189,6 @@ function TaskList({ onLogout }) {
       });
     });
 
-    // ===== サーバーへ送信 =====
     api
       .post("tasks/reorder/", {
         task_id: taskId,
@@ -224,7 +201,6 @@ function TaskList({ onLogout }) {
           err?.response?.data?.detail ||
           "";
 
-        // サーバーが本当にエラーのときだけ表示
         if (msg) {
           alert(msg);
         }
@@ -438,9 +414,4 @@ function TaskList({ onLogout }) {
 }
 
 export default TaskList;
-
-
-
-
-
 

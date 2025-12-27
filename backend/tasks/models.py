@@ -9,7 +9,6 @@ class Task(models.Model):
         ("done", "Done"),
     ]
 
-    # ★ 追加：タスクの所有者
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

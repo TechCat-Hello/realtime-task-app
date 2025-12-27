@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 
 
 def home(request):
-    return HttpResponse("Hello, this is the homepage!")
+    return HttpResponse("Task Management API - Backend is running")
 
 
 @api_view(["GET"])
@@ -38,7 +38,6 @@ def register(request):
     if User.objects.filter(email=email).exists():
         return Response({"error": "email already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
-
     user = User.objects.create_user(username=username, email=email, password=password)
     return Response({"id": user.id, "username": user.username, "email": user.email}, status=status.HTTP_201_CREATED)
 
@@ -48,17 +47,14 @@ def register(request):
 def forgot_password(request):
     """Request password reset. Expects JSON: {email}."""
     email = request.data.get("email")
-    
+
     if not email:
         return Response({"error": "email is required"}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     try:
         user = User.objects.get(email=email)
-        # 実装簡略化：ここではユーザーが存在することを確認するだけ
-        # 本番環境ではメール送信やトークン生成を行う
         return Response({"message": "If email exists, password reset link will be sent"}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        # セキュリティのため「存在しません」と返さず、存在した場合と同じメッセージを返す
         return Response({"message": "If email exists, password reset link will be sent"}, status=status.HTTP_200_OK)
 
 

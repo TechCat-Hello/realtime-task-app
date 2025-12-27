@@ -63,7 +63,7 @@ function Login({ onLogin }) {
         const me = await api.get("me/");
         localStorage.setItem("is_staff", String(me.data.is_staff));
       } catch (err) {
-        console.warn("failed to fetch current user info", err);
+        // Silently ignore if fetching user info fails
       }
 
       onLogin();
@@ -237,7 +237,6 @@ function Login({ onLogin }) {
               setSignLoading(true);
               try {
                 await api.post("register/", { username: signUsername, email: signEmail, password: signPassword });
-                // 自動ログイン
                 const tokenRes = await api.post("token/", { username: signUsername, password: signPassword });
                 localStorage.setItem("accessToken", tokenRes.data.access);
                 localStorage.setItem("refreshToken", tokenRes.data.refresh);
@@ -246,7 +245,7 @@ function Login({ onLogin }) {
                   const me = await api.get("me/");
                   localStorage.setItem("is_staff", String(me.data.is_staff));
                 } catch (err) {
-                  console.warn("failed to fetch current user info", err);
+                  // Silently ignore if fetching user info fails
                 }
                 setOpenSignUp(false);
                 onLogin();

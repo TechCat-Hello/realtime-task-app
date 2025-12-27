@@ -3,11 +3,49 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
+dist/
+build/
+.Python
 
 # Django
 *.sqlite3
+.pytest_cache/
+htmlcov/
+.coverage
+*.cover
 
-# Environment
-.env
+# Virtual Environment
 venv/
-.env/
+env/
+.venv
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Frontend build
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Backend
+backend/.env
+backend/venv/
+backend/.pytest_cache/

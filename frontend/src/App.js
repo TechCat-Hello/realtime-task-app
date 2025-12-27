@@ -5,18 +5,15 @@ import TaskList from "./TaskList";
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // 🔑 初回表示時に localStorage を確認
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     setIsLoggedIn(!!token);
   }, []);
 
-  // 🔓 ログイン成功時
   const handleLogin = () => {
     setIsLoggedIn(true);
   };
 
-  // 🚪 ログアウト時
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");

@@ -24,7 +24,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         task = serializer.save(user=self.request.user)
         self.broadcast_task_update(task)
-        # Slack 通知：タスク作成
         notify_task_created(task)
 
     def perform_update(self, serializer):
@@ -36,14 +35,12 @@ class TaskViewSet(viewsets.ModelViewSet):
         if "title" in validated:
             if task.user != request_user:
                 raise PermissionDenied("タスク名を変更できるのは作成者だけです。")
-            # Slack 通知：タスク名編集
             old_title = task.title
             new_title = validated["title"]
             notify_task_title_updated(old_title, new_title, request_user.username)
 
         updated_task = serializer.save()
-        
-        # Slack 通知：Status=Done への変更
+
         if "status" in validated and validated["status"] == "done" and task.status != "done":
             notify_task_done(updated_task)
         
@@ -52,16 +49,13 @@ class TaskViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         is_owner = instance.user == self.request.user
 
-        # Only owner can delete (admin cannot delete other users' tasks)
         if not is_owner:
             raise PermissionDenied("このタスクを削除できるのは作成者だけです。")
 
-        # Slack 通知：タスク削除
         task_title = instance.title
         task_id = instance.id
         instance.delete()
 
-        # Slack 通知を送信
         from .slack_notifier import send_slack_notification
         message = f"タスク「{task_title}」(ID: {task_id}) が削除されました。\n削除者: @{self.request.user.username}"
         send_slack_notification(message, title="🗑️ タスク削除", color="#d32f2f")
@@ -106,29 +100,23 @@ class TaskViewSet(viewsets.ModelViewSet):
 
                 old_status = task.status
 
-                # 本人ではない & 管理者でもない
                 if not is_owner and not is_admin:
                     return Response(
                         {"error": "他のユーザーのタスクは移動できません。"},
                         status=status.HTTP_403_FORBIDDEN,
                     )
 
-                # 管理者が他人タスクを別カラムへ動かそうとしている場合のみ禁止
                 if is_admin and not is_owner and new_status != old_status:
                     return Response(
                         {"error": "管理者でも、他のユーザーのタスクを別のカラムへは移動できません。"},
                         status=status.HTTP_403_FORBIDDEN,
                     )
 
-                # ステータス更新
                 task.status = new_status
                 task.save()
 
-                # Slack 通知：Status=Done への変更
                 if new_status == "done" and old_status != "done":
                     notify_task_done(task)
-
-                # 並び順の再計算
                 tasks_same_column = (
                     Task.objects
                     .filter(status=new_status)
@@ -137,7 +125,6 @@ class TaskViewSet(viewsets.ModelViewSet):
 
                 tasks_same_column = [t for t in tasks_same_column if t.id != task.id]
 
-                # clamp new_order
                 if new_order < 0:
                     new_order = 0
                 if new_order > len(tasks_same_column):

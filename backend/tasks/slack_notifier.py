@@ -1,4 +1,5 @@
 import os
+import logging
 import requests
 from django.conf import settings
 
@@ -29,12 +30,13 @@ def send_slack_notification(message: str, title: str = None, color: str = "#36a6
         ]
     }
     
+    logger = logging.getLogger(__name__)
     try:
         response = requests.post(webhook_url, json=payload, timeout=5)
         response.raise_for_status()
-    except requests.RequestException as e:
+    except requests.RequestException:
         # ログに記録してサイレント失敗（API エラーは返さない）
-        print(f"Slack notification failed: {e}")
+        logger.exception("Slack notification failed")
 
 
 def notify_task_created(task):
