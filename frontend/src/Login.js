@@ -14,12 +14,22 @@ import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import Paper from "@mui/material/Paper";
 import Alert from "@mui/material/Alert";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [openSignUp, setOpenSignUp] = useState(false);
+  const [signUsername, setSignUsername] = useState("");
+  const [signPassword, setSignPassword] = useState("");
+  const [signPasswordConfirm, setSignPasswordConfirm] = useState("");
+  const [signError, setSignError] = useState("");
+  const [signLoading, setSignLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -120,7 +130,11 @@ function Login({ onLogin }) {
                 </Link>
               </Grid>
               <Grid item>
-                <Link href="#" variant="body2">
+                <Link
+                  component="button"
+                  variant="body2"
+                  onClick={() => setOpenSignUp(true)}
+                >
                   アカウント作成
                 </Link>
               </Grid>
@@ -128,6 +142,88 @@ function Login({ onLogin }) {
           </Box>
         </Box>
       </Paper>
+
+      {/* Sign Up Dialog */}
+      <Dialog open={openSignUp} onClose={() => setOpenSignUp(false)}>
+        <DialogTitle>アカウント作成</DialogTitle>
+        <DialogContent>
+          {signError && <Alert severity="error">{signError}</Alert>}
+          <Box sx={{ mt: 1, width: 360 }}>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="signup-username"
+              label="ユーザー名"
+              value={signUsername}
+              onChange={(e) => setSignUsername(e.target.value)}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="signup-password"
+              label="パスワード"
+              type="password"
+              value={signPassword}
+              onChange={(e) => setSignPassword(e.target.value)}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="signup-password-confirm"
+              label="パスワード（確認）"
+              type="password"
+              value={signPasswordConfirm}
+              onChange={(e) => setSignPasswordConfirm(e.target.value)}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSignUp(false)} disabled={signLoading}>
+            キャンセル
+          </Button>
+          <Button
+            onClick={async () => {
+              setSignError("");
+              if (!signUsername || !signPassword) {
+                setSignError("ユーザー名とパスワードを入力してください");
+                return;
+              }
+              if (signPassword !== signPasswordConfirm) {
+                setSignError("パスワードが一致しません");
+                return;
+              }
+              setSignLoading(true);
+              try {
+                await api.post("register/", { username: signUsername, password: signPassword });
+                // 自動ログイン
+                const tokenRes = await api.post("token/", { username: signUsername, password: signPassword });
+                localStorage.setItem("accessToken", tokenRes.data.access);
+                localStorage.setItem("refreshToken", tokenRes.data.refresh);
+                localStorage.setItem("username", signUsername);
+                try {
+                  const me = await api.get("me/");
+                  localStorage.setItem("is_staff", String(me.data.is_staff));
+                } catch (err) {
+                  console.warn("failed to fetch current user info", err);
+                }
+                setOpenSignUp(false);
+                onLogin();
+              } catch (err) {
+                const msg = err?.response?.data?.error || "アカウント作成に失敗しました";
+                setSignError(msg);
+              } finally {
+                setSignLoading(false);
+              }
+            }}
+            disabled={signLoading}
+          >
+            {signLoading ? "作成中..." : "アカウント作成"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

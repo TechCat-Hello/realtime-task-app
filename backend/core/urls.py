@@ -19,6 +19,8 @@ urlpatterns = [
 
     # Current user info (authenticated)
     path("api/me/", views.current_user),
+    # User registration
+    path("api/register/", views.register),
 
     # フロント用
     path("", views.home),
