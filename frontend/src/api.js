@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000/api/",
+  baseURL: "https://realtime-task-app-backend.onrender.com/api/",
 });
 
 // 毎リクエストで JWT を付与

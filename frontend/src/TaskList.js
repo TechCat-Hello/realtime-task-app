@@ -55,7 +55,7 @@ function TaskList({ onLogout }) {
   }, [onLogout]);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8000/ws/tasks/");
+    const ws = new WebSocket("wss://realtime-task-app-backend.onrender.com/ws/tasks/");
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
