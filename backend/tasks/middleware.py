@@ -1,14 +1,15 @@
 from urllib.parse import parse_qs
-from django.contrib.auth.models import AnonymousUser
-from django.contrib.auth import get_user_model
 from channels.db import database_sync_to_async
-from rest_framework_simplejwt.tokens import AccessToken
-
-User = get_user_model()
 
 
 @database_sync_to_async
 def get_user_from_token(token_string):
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import AnonymousUser
+    from rest_framework_simplejwt.tokens import AccessToken
+    
+    User = get_user_model()
+    
     try:
         access_token = AccessToken(token_string)
         user_id = access_token['user_id']
@@ -26,6 +27,8 @@ class JWTAuthMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
+        from django.contrib.auth.models import AnonymousUser
+        
         # Get token from query string
         query_string = scope.get('query_string', b'').decode()
         query_params = parse_qs(query_string)
