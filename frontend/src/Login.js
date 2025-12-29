@@ -154,7 +154,8 @@ function Login({ onLogin }) {
                   パスワードを忘れた場合
                 </Link>
               </Grid>
-              <Grid item>
+              {/* 新規登録機能を有効化する場合は、以下のコメントアウトを解除してください */}
+              {/* <Grid item>
                 <Link
                   component="button"
                   variant="body2"
@@ -162,14 +163,14 @@ function Login({ onLogin }) {
                 >
                   アカウント作成
                 </Link>
-              </Grid>
+              </Grid> */}
             </Grid>
           </Box>
         </Box>
       </Paper>
 
-      {/* Sign Up Dialog */}
-      <Dialog open={openSignUp} onClose={() => setOpenSignUp(false)} fullScreen={fullScreenDialog} maxWidth="xs">
+      {/* Sign Up Dialog - 新規登録機能を有効化する場合は、以下のコメントアウトを解除してください */}
+      {/* <Dialog open={openSignUp} onClose={() => setOpenSignUp(false)} fullScreen={fullScreenDialog} maxWidth="xs">
         <DialogTitle sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>アカウント作成</DialogTitle>
         <DialogContent>
           {signError && <Alert severity="error">{signError}</Alert>}
@@ -261,7 +262,7 @@ function Login({ onLogin }) {
             {signLoading ? "作成中..." : "アカウント作成"}
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */
 
       {/* Forgot Password Dialog */}
       <Dialog open={openForgot} onClose={() => setOpenForgot(false)} fullScreen={fullScreenDialog} maxWidth="xs">
