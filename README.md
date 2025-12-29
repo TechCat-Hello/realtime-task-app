@@ -102,22 +102,28 @@ Trello を参考にしたカンバン方式の UI でドラッグ＆ドロップ
 ## 📸 スクリーンショット
 
 ### ログイン画面
+JWT認証を使用したセキュアなログインシステムです。
+> ユーザー名とパスワードを入力してログインします。
 
-![ログイン画面](screenshots/login.png)
+![ログイン画面](docs/screenshots/login.png)
 
 ### タスクボード 
+To Do、In Progress、Doneの3つのステータスでタスクを管理できます。
+> ドラッグ&ドロップでタスクの移動が可能です。
 
-![貸出一覧表＋出力ボタン](screenshots/.png)
+![タスク一覧](docs/screenshots/dashboard.png)
 
 ### Slack通知
+タスクの作成・更新・完了時にSlackへ自動通知されます。
+> チーム全体でタスクの進捗をリアルタイムに共有できます。
 
-![Slack通知](screenshots/.png)
+![Slack通知](docs/screenshots/slack-notification.png)
 
-### 権限エラー（例）
+### 権限エラー
 タスク作成者以外がタスク名を編集しようとすると、エラーメッセージが表示されます。
 > 不正な操作を防ぎ、誤編集を防止するための仕様です。  
 
-![task-permission-error](.png)
+![権限エラー](docs/screenshots/permission-error.png)
 
 ## 📁 プロジェクト構造
 
@@ -138,10 +144,15 @@ Trello を参考にしたカンバン方式の UI でドラッグ＆ドロップ
 │   │   ├── urls.py        # URL routing
 │   │   ├── routing.py     # WebSocket routing
 │   │   ├── consumers.py   # WebSocket consumer
+│   │   ├── middleware.py  # JWT WebSocket authentication
 │   │   ├── permissions.py # Custom permissions
 │   │   ├── slack_notifier.py # Slack integration
 │   │   ├── admin.py       # Django admin
+│   │   ├── apps.py        # App configuration
 │   │   ├── tests.py       # Unit tests
+│   │   ├── management/    # Custom management commands
+│   │   │   └── commands/
+│   │   │       └── create_demo_users.py # Demo user creation
 │   │   └── migrations/    # Database migrations
 │   ├── tests/             # Test files
 │   │   ├── test_auth.py   # Authentication tests
@@ -163,6 +174,8 @@ Trello を参考にしたカンバン方式の UI でドラッグ＆ドロップ
 │   ├── public/            # Static files
 │   ├── package.json       # Node.js dependencies
 │   └── .gitignore
+├── docs/
+│   └── screenshots/       # README screenshots
 ├── docker-compose.yml     # Docker Compose configuration
 ├── .env.example           # Environment variables template (local/Docker)
 ├── .gitignore             # Git ignore rules
