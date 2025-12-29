@@ -1,12 +1,17 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
+import logging
+
+logger = logging.getLogger(__name__)
 
 class TaskConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         user = self.scope["user"]
+        logger.info(f"WebSocket connection attempt - User: {user}, Anonymous: {user.is_anonymous}")
 
         # 🔒 未ログインは WebSocket 接続拒否
         if user.is_anonymous:
+            logger.warning("WebSocket connection rejected - Anonymous user")
             await self.close()
             return
 
@@ -19,6 +24,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
         )
 
         await self.accept()
+        logger.info(f"WebSocket connected - User: {user.username} (ID: {user.id})")
 
         # （デバッグ用・あってもなくてもOK）
         await self.send(text_data=json.dumps({
@@ -27,10 +33,11 @@ class TaskConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(
-            self.group_name,
-            self.channel_name
-        )
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name
+            )
 
     # =========================
     # 単体更新
