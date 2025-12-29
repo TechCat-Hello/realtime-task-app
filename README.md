@@ -6,7 +6,9 @@ Slackによる通知機能も実装しています。
 
 ## 🌐 アプリURL（本番環境）
 
-🔗 
+🔗 **https://realtime-task-app-frontend.onrender.com**
+
+> バックエンドAPI: https://realtime-task-app-backend.onrender.com 
 
 
 ## 🎯 プロジェクト概要
