@@ -55,7 +55,21 @@ function TaskList({ onLogout }) {
   }, [onLogout]);
 
   useEffect(() => {
-    const ws = new WebSocket("wss://realtime-task-app-backend.onrender.com/ws/tasks/");
+    const token = localStorage.getItem("accessToken");
+    const wsUrl = `wss://realtime-task-app-backend.onrender.com/ws/tasks/?token=${token}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log("WebSocket connected");
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
