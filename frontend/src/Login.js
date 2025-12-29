@@ -75,8 +75,18 @@ function Login({ onLogin }) {
   };
 
   return (
-    <Container component="main" maxWidth="xs" sx={{ mt: { xs: 4, sm: 8 } }}>
-      <Paper elevation={6} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2 }}>
+    <Container component="main" maxWidth="sm" sx={{ mt: { xs: 2, sm: 4 } }}>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: { xs: 3, sm: 5 }, 
+          borderRadius: 4,
+          background: 'linear-gradient(145deg, #ffffff 0%, #f5f7fa 100%)',
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)'
+        }}
+      >
         <Box
           sx={{
             display: "flex",
@@ -84,20 +94,70 @@ function Login({ onLogin }) {
             alignItems: "center",
           }}
         >
-          <Avatar sx={{ m: 1, bgcolor: "primary.main", width: { xs: 40, sm: 56 }, height: { xs: 40, sm: 56 } }}>
-            <LockOutlinedIcon sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }} />
+          <Avatar 
+            sx={{ 
+              m: 1, 
+              bgcolor: "primary.main", 
+              width: { xs: 56, sm: 72 }, 
+              height: { xs: 56, sm: 72 },
+              boxShadow: '0 4px 20px rgba(25, 118, 210, 0.3)'
+            }}
+          >
+            <LockOutlinedIcon sx={{ fontSize: { xs: "2rem", sm: "2.5rem" } }} />
           </Avatar>
-          <Typography component="h1" variant="h5" sx={{ mt: 1, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
-            サインイン
+          
+          <Typography 
+            component="h1" 
+            variant="h4" 
+            sx={{ 
+              mt: 2, 
+              mb: 1,
+              fontSize: { xs: '1.75rem', sm: '2.125rem' },
+              fontWeight: 700,
+              background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em'
+            }}
+          >
+            TaskSync
+          </Typography>
+          
+          <Typography 
+            variant="body1" 
+            color="text.secondary" 
+            align="center"
+            sx={{ 
+              mb: 1,
+              fontSize: { xs: '0.875rem', sm: '1rem' },
+              lineHeight: 1.6
+            }}
+          >
+            TaskSync（リアルタイムタスク管理アプリ）
+          </Typography>
+          
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            align="center"
+            sx={{ 
+              mb: 3,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              maxWidth: '450px',
+              lineHeight: 1.6
+            }}
+          >
+            チーム全体でタスクをリアルタイム同期。  
+            Slack通知連携とステータス別の進捗グラフで、効率的なプロジェクト管理を実現します。
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ width: "100%", mt: 2 }}>
+            <Alert severity="error" sx={{ width: "100%", mt: 1, mb: 2 }}>
               {error}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleLogin} sx={{ mt: 2, width: "100%" }}>
+          <Box component="form" onSubmit={handleLogin} sx={{ mt: 1, width: "100%" }}>
             <TextField
               margin="normal"
               required
@@ -109,6 +169,11 @@ function Login({ onLogin }) {
               autoFocus
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
             <TextField
               margin="normal"
@@ -121,11 +186,17 @@ function Login({ onLogin }) {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
 
             <FormControlLabel
               control={<Checkbox value="remember" color="primary" />}
-              label="ログイン情報を保存"
+              label={<Typography variant="body2">ログイン情報を保存</Typography>}
+              sx={{ mt: 1 }}
             />
 
             <Button
@@ -133,7 +204,19 @@ function Login({ onLogin }) {
               fullWidth
               variant="contained"
               color="primary"
-              sx={{ mt: 2, mb: 1 }}
+              sx={{ 
+                mt: 3, 
+                mb: 2,
+                py: 1.5,
+                borderRadius: 2,
+                fontSize: '1rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                boxShadow: '0 4px 14px rgba(25, 118, 210, 0.4)',
+                '&:hover': {
+                  boxShadow: '0 6px 20px rgba(25, 118, 210, 0.5)',
+                }
+              }}
               disabled={loading}
             >
               {loading ? "読み込み中..." : "ログイン"}
@@ -150,6 +233,12 @@ function Login({ onLogin }) {
                     setForgotError("");
                     setForgotSuccess("");
                   }}
+                  sx={{
+                    textDecoration: 'none',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    }
+                  }}
                 >
                   パスワードを忘れた場合
                 </Link>
@@ -160,6 +249,12 @@ function Login({ onLogin }) {
                   component="button"
                   variant="body2"
                   onClick={() => setOpenSignUp(true)}
+                  sx={{
+                    textDecoration: 'none',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    }
+                  }}
                 >
                   アカウント作成
                 </Link>
@@ -168,6 +263,12 @@ function Login({ onLogin }) {
           </Box>
         </Box>
       </Paper>
+      
+      <Box sx={{ mt: 3, textAlign: 'center' }}>
+        <Typography variant="caption" color="text.secondary">
+          デモアカウント: admin / demo789! または user1 / password123!
+        </Typography>
+      </Box>
 
       {/* Sign Up Dialog - 新規登録機能を有効化する場合は、以下のコメントアウトを解除してください
       <Dialog open={openSignUp} onClose={() => setOpenSignUp(false)} fullScreen={fullScreenDialog} maxWidth="xs">
