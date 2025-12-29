@@ -172,7 +172,7 @@ function Login({ onLogin }) {
             align="center"
             sx={{ 
               mb: 3,
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              fontSize: { xs: '0.875rem', sm: '1rem' },
               maxWidth: '450px',
               lineHeight: 1.8
             }}
@@ -295,10 +295,92 @@ function Login({ onLogin }) {
         </Box>
       </Paper>
       
-      <Box sx={{ mt: 3, textAlign: 'center' }}>
-        <Typography variant="caption" color="text.secondary">
-          デモアカウント: admin / demo789! または user1 / password123!
+      <Box 
+        sx={{ 
+          mt: 3, 
+          px: 3,
+          py: 2,
+          background: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 3,
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+          maxWidth: '400px',
+          mx: 'auto'
+        }}
+      >
+        <Typography 
+          variant="subtitle2" 
+          align="center"
+          sx={{ 
+            fontSize: { xs: '0.875rem', sm: '0.95rem' },
+            fontWeight: 600,
+            color: '#1976d2',
+            mb: 1.5,
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase'
+          }}
+        >
+          デモアカウント
         </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            gap: 1
+          }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                fontWeight: 600,
+                color: '#1e3a5f'
+              }}
+            >
+              管理者:
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                fontWeight: 400,
+                color: '#424242',
+                fontFamily: 'monospace'
+              }}
+            >
+              admin / demo789!
+            </Typography>
+          </Box>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            gap: 1
+          }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                fontWeight: 600,
+                color: '#1e3a5f'
+              }}
+            >
+              一般ユーザー:
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                fontWeight: 400,
+                color: '#424242',
+                fontFamily: 'monospace'
+              }}
+            >
+              user1 / password123!
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* Sign Up Dialog - 新規登録機能を有効化する場合は、以下のコメントアウトを解除してください
