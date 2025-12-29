@@ -75,18 +75,29 @@ function Login({ onLogin }) {
   };
 
   return (
-    <Container component="main" maxWidth="sm" sx={{ mt: { xs: 2, sm: 4 } }}>
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: { xs: 3, sm: 5 }, 
-          borderRadius: 4,
-          background: 'linear-gradient(145deg, #ffffff 0%, #f5f7fa 100%)',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)'
-        }}
-      >
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        py: 4
+      }}
+    >
+      <Container component="main" maxWidth="sm">
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: { xs: 3, sm: 5 }, 
+            borderRadius: 4,
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+          }}
+        >
         <Box
           sx={{
             display: "flex",
@@ -124,12 +135,13 @@ function Login({ onLogin }) {
           </Typography>
           
           <Typography 
-            variant="body1" 
-            color="text.secondary" 
+            variant="h6" 
+            color="text.primary" 
             align="center"
             sx={{ 
               mb: 1,
-              fontSize: { xs: '0.875rem', sm: '1rem' },
+              fontSize: { xs: '1.125rem', sm: '1.25rem' },
+              fontWeight: 700,
               lineHeight: 1.6
             }}
           >
@@ -147,8 +159,9 @@ function Login({ onLogin }) {
               lineHeight: 1.6
             }}
           >
-            チーム全体でタスクをリアルタイム同期。  
-            Slack通知連携とステータス別の進捗グラフで、効率的なプロジェクト管理を実現します。
+            チーム全体でタスクをリアルタイム同期。    
+            Slack通知連携とステータス別の進捗グラフで、  
+            効率的なプロジェクト管理を実現します。
           </Typography>
 
           {error && (
@@ -486,7 +499,8 @@ function Login({ onLogin }) {
           )}
         </DialogActions>
       </Dialog>
-    </Container>
+      </Container>
+    </Box>
   );
 }
 
