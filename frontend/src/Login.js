@@ -78,7 +78,7 @@ function Login({ onLogin }) {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #a8edf0 0%, #76DAE4 50%, #4ec9d6 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -117,28 +117,46 @@ function Login({ onLogin }) {
             <LockOutlinedIcon sx={{ fontSize: { xs: "2rem", sm: "2.5rem" } }} />
           </Avatar>
           
-          <Typography 
-            component="h1" 
-            variant="h4" 
-            sx={{ 
-              mt: 2, 
-              mb: 1,
-              fontSize: { xs: '1.75rem', sm: '2.125rem' },
-              fontWeight: 700,
-              background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '-0.02em'
-            }}
-          >
-            TaskSync
-          </Typography>
+          <Box sx={{ position: 'relative', display: 'inline-block' }}>
+            <Typography 
+              component="h1" 
+              variant="h4" 
+              sx={{ 
+                mt: 2, 
+                mb: 0.5,
+                fontSize: { xs: '1.75rem', sm: '2.125rem' },
+                fontWeight: 700,
+                background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                letterSpacing: '-0.02em'
+              }}
+            >
+              TaskSync
+            </Typography>
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 2,
+                left: '-5%',
+                width: '110%',
+                height: '6px',
+                background: 'linear-gradient(90deg, transparent 0%, #1976d2 5%, #42a5f5 50%, #1976d2 95%, transparent 100%)',
+                borderRadius: '50% 30% 40% 60%',
+                opacity: 0.7,
+                transform: 'rotate(-1deg)',
+                filter: 'blur(0.5px)',
+                boxShadow: '0 1px 3px rgba(25, 118, 210, 0.3)'
+              }}
+            />
+          </Box>
           
           <Typography 
             variant="h6" 
             color="text.primary" 
             align="center"
             sx={{ 
+              mt: 2,
               mb: 1,
               fontSize: { xs: '1.125rem', sm: '1.25rem' },
               fontWeight: 700,
@@ -156,11 +174,11 @@ function Login({ onLogin }) {
               mb: 3,
               fontSize: { xs: '0.75rem', sm: '0.875rem' },
               maxWidth: '450px',
-              lineHeight: 1.6
+              lineHeight: 1.8
             }}
           >
-            チーム全体でタスクをリアルタイム同期。    
-            Slack通知連携とステータス別の進捗グラフで、  
+            チーム全体でタスクを<Box component="span" sx={{ fontWeight: 700, color: '#1976d2' }}>リアルタイム同期</Box>。<br />
+            <Box component="span" sx={{ fontWeight: 700, color: '#1976d2' }}>Slack通知</Box>連携と<Box component="span" sx={{ fontWeight: 700, color: '#1976d2' }}>進捗グラフ</Box>で、<br />
             効率的なプロジェクト管理を実現します。
           </Typography>
 
