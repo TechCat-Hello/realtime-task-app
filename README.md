@@ -202,6 +202,10 @@ Docker Composeを使用すると、環境構築が簡単です。
 git clone <repository-url>
 cd realtime-task-app
 
+# .envファイルの作成（Slack通知を使う場合）
+cp .env.example .env
+# .envファイルを編集してSLACK_WEBHOOK_URLを設定
+
 # コンテナを起動（初回はイメージのビルドも実行）
 docker-compose up --build
 
@@ -211,6 +215,12 @@ docker-compose up -d
 # コンテナを停止
 docker-compose down
 ```
+
+**Slack通知の設定（オプション）:**
+1. `.env`ファイルを作成: `cp .env.example .env`
+2. Slack Webhook URLを取得（後述の「Slack連携設定」を参照）
+3. `.env`ファイルに`SLACK_WEBHOOK_URL=<取得したURL>`を追記
+4. コンテナを再起動: `docker-compose restart backend`
 
 **アクセス:**
 - バックエンド: `http://localhost:8000`
@@ -269,6 +279,39 @@ npm start
 
 アプリケーションは `http://localhost:3000` で起動します。
 
+---
+
+### Slack連携設定（オプション）
+
+タスクの変更をSlackに通知する機能を有効にする場合:
+
+1. **Slack Appの作成/設定:**
+   - [Slack API](https://api.slack.com/apps)にアクセス
+   - 新規アプリを作成、または既存のアプリを選択
+   - 「Incoming Webhooks」機能を有効化
+   - 「Add New Webhook to Workspace」をクリック
+   - 通知先のチャンネルを選択
+   - 生成されたWebhook URLをコピー
+
+2. **環境変数の設定:**
+   
+   **Docker使用時:**
+   ```bash
+   # .envファイルに追記
+   SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+   ```
+
+   **Render本番環境:**
+   - Renderダッシュボード → Environment → Environment Variables
+   - `SLACK_WEBHOOK_URL` を追加
+
+3. **セキュリティ注意事項:**
+   - ⚠️ Webhook URLは絶対に公開リポジトリにコミットしないこと
+   - `.env`ファイルは`.gitignore`に含まれており、Gitにコミットされません
+   - 万が一URLが漏洩した場合、Slackが自動的に無効化します
+   - 無効化された場合は、上記手順で再度Webhook URLを取得してください
+
+
 ## 🚀 デプロイ（Render + Supabase）
 
 ### 1. Supabase PostgreSQLの準備
@@ -302,6 +345,16 @@ npm start
    CORS_ALLOWED_ORIGINS=<デプロイ後のフロントエンドURL>
    SLACK_WEBHOOK_URL=<SlackのWebhook URL（任意）>
    ```
+
+   **⚠️ セキュリティ注意:**
+   - `SLACK_WEBHOOK_URL`は必ず環境変数で設定し、公開リポジトリにコミットしないでください
+   - Slack Webhook URLの取得方法:
+     1. [Slack API](https://api.slack.com/apps)にアクセス
+     2. アプリを作成または既存のアプリを選択
+     3. 「Incoming Webhooks」を有効化
+     4. 「Add New Webhook to Workspace」をクリック
+     5. 通知先のチャンネルを選択
+     6. 生成されたWebhook URLを環境変数に設定
 
 6. 「Create Web Service」をクリック
 
