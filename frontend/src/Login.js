@@ -310,6 +310,21 @@ function Login({ onLogin }) {
         }}
       >
         <Typography 
+          variant="body2" 
+          align="left"
+          sx={{ 
+            fontSize: { xs: '0.8rem', sm: '0.875rem' },
+            color: '#424242',
+            mb: 2,
+            lineHeight: 1.6
+          }}
+        >
+          本アプリはポートフォリオとして公開しています。<br />
+          そのため、セキュリティとデータ保護の観点から、<br />
+          新規登録機能は無効化しています。<br />
+          下記のデモアカウントでログインしてお試しください。
+        </Typography>
+        <Typography 
           variant="subtitle2" 
           align="center"
           sx={{ 
