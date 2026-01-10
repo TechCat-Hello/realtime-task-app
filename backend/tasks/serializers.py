@@ -3,9 +3,6 @@ from .models import Task
 
 
 class TaskSerializer(serializers.ModelSerializer):
-    # ✅ 完了フラグ（既存）
-    completed = serializers.SerializerMethodField()
-
     # ✅ 作成者のユーザー名を追加
     username = serializers.CharField(
         source="user.username",
@@ -19,11 +16,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "status",
-            "completed",
-            "username",      # ← ★追加
+            "username",
             "created_at",
             "updated_at",
         ]
-
-    def get_completed(self, obj):
-        return obj.status == "done"
