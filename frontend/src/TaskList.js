@@ -55,12 +55,17 @@ function TaskList({ onLogout }) {
   }, [onLogout]);
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    const wsUrl = `wss://realtime-task-app-backend.onrender.com/ws/tasks/?token=${token}`;
+    const wsUrl = `wss://realtime-task-app-backend.onrender.com/ws/tasks/`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-      console.log("WebSocket connected");
+      console.log("WebSocket connected - sending authentication");
+      // 🔐 接続後に認証トークンを送信（URLにトークンを含めない）
+      const token = localStorage.getItem("accessToken");
+      ws.send(JSON.stringify({ 
+        type: "auth", 
+        token: token 
+      }));
     };
 
     ws.onerror = (error) => {
@@ -73,6 +78,18 @@ function TaskList({ onLogout }) {
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
+
+      // ✅ 認証成功メッセージ
+      if (data.type === "authenticated") {
+        console.log("WebSocket authenticated:", data.message);
+        return;
+      }
+
+      // ❌ エラーメッセージ
+      if (data.type === "error") {
+        console.error("WebSocket error:", data.message);
+        return;
+      }
 
       if (data.type === "task_update") {
         setTasks((prev) =>
