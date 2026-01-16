@@ -22,6 +22,7 @@ def get_user_from_token(token_string):
 class JWTAuthMiddleware:
     """
     WebSocket connections with JWT token authentication
+    接続時は認証なし、初回メッセージで認証を行う
     """
     def __init__(self, app):
         self.app = app
@@ -29,14 +30,7 @@ class JWTAuthMiddleware:
     async def __call__(self, scope, receive, send):
         from django.contrib.auth.models import AnonymousUser
         
-        # Get token from query string
-        query_string = scope.get('query_string', b'').decode()
-        query_params = parse_qs(query_string)
-        token = query_params.get('token', [None])[0]
-
-        if token:
-            scope['user'] = await get_user_from_token(token)
-        else:
-            scope['user'] = AnonymousUser()
+        # 初期接続は匿名ユーザーとして許可（認証は接続後のメッセージで実施）
+        scope['user'] = AnonymousUser()
 
         return await self.app(scope, receive, send)
