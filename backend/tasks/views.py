@@ -29,11 +29,12 @@ class TaskViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         task = self.get_object()
         request_user = self.request.user
+        is_owner = task.user == request_user
 
         validated = serializer.validated_data
 
         if "title" in validated:
-            if task.user != request_user:
+            if not is_owner:
                 raise PermissionDenied("タスク名を変更できるのは作成者だけです。")
             old_title = task.title
             new_title = validated["title"]
