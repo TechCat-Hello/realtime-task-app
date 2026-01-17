@@ -180,11 +180,20 @@ if not DEBUG:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS Settings
-if os.getenv('CORS_ALLOWED_ORIGINS'):
-    CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS').split(',')
-    CORS_ALLOW_ALL_ORIGINS = False
+if DEBUG:
+    # Development: Allow all origins for convenience
+    if os.getenv('CORS_ALLOWED_ORIGINS'):
+        CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS').split(',')
+        CORS_ALLOW_ALL_ORIGINS = False
+    else:
+        CORS_ALLOW_ALL_ORIGINS = True
 else:
-    CORS_ALLOW_ALL_ORIGINS = True
+    # Production: Require explicit CORS configuration
+    CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS')
+    if not CORS_ALLOWED_ORIGINS:
+        raise ValueError("CORS_ALLOWED_ORIGINS must be set in production (DEBUG=False)")
+    CORS_ALLOWED_ORIGINS = CORS_ALLOWED_ORIGINS.split(',')
+    CORS_ALLOW_ALL_ORIGINS = False
 
 # CSRF Settings for production
 if os.getenv('CSRF_TRUSTED_ORIGINS'):
