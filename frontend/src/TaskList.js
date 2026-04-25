@@ -55,7 +55,7 @@ function TaskList({ onLogout }) {
   }, [onLogout]);
 
   useEffect(() => {
-    const wsUrl = `wss://realtime-task-app-backend.onrender.com/ws/tasks/`;
+    const wsUrl = `wss://task-sync.com/ws/tasks/`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
