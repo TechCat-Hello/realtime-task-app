@@ -4,11 +4,20 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.models import User
+from rest_framework_simplejwt.views import TokenObtainPairView
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
+@method_decorator(csrf_exempt, name='dispatch')
+class CustomTokenObtainPairView(TokenObtainPairView):
+    pass
 
 def home(request):
     return HttpResponse("Task Management API - Backend is running")
 
+def health(request):
+    """ALB health check endpoint. No authentication required."""
+    return HttpResponse("ok", status=200)
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -41,7 +50,6 @@ def register(request):
     user = User.objects.create_user(username=username, email=email, password=password)
     return Response({"id": user.id, "username": user.username, "email": user.email}, status=status.HTTP_201_CREATED)
 
-
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def forgot_password(request):
@@ -64,10 +72,10 @@ def reset_password(request):
     """Reset password. Expects JSON: {email, new_password}."""
     email = request.data.get("email")
     new_password = request.data.get("new_password")
-    
+
     if not email or not new_password:
         return Response({"error": "email and new_password are required"}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     try:
         user = User.objects.get(email=email)
         user.set_password(new_password)
