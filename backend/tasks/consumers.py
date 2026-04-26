@@ -1,4 +1,3 @@
-  GNU nano 7.2                                                                                   backend/tasks/consumers.py *
 import json
 import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -8,23 +7,26 @@ logger = logging.getLogger(__name__)
 
 class TaskConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.authenticated = True
+        self.authenticated = False
         self.user = None
-
-        await self.channel_layer.group_add(
-            "tasks_all",
-            self.channel_name
-        )
+        self.group_name = "tasks_all"
+        self.auth_timeout_task = asyncio.ensure_future(self._auth_timeout())
 
         await self.accept()
 
     async def receive(self, text_data):
-        print("RECEIVED:", text_data)
+        try:
+            data = json.loads(text_data)
+        except json.JSONDecodeError:
+            return
 
-        await self.send(text_data=json.dumps({
-            "type": "echo",
-            "message": text_data
-        }))
+        if data.get("type") == "auth":
+            await self._handle_auth(data.get("token"))
+        elif not self.authenticated:
+            await self.send(text_data=json.dumps({
+                "type": "error",
+                "message": "認証が必要です"
+            }))
 
     async def _auth_timeout(self):
         """認証タイムアウト処理（5秒）"""
