@@ -6,9 +6,7 @@ Slackによる通知機能も実装しています。
 
 ## 🌐 アプリURL（本番環境）
 
-🔗 **https://realtime-task-app-frontend.onrender.com**
-
-> バックエンドAPI: https://realtime-task-app-backend.onrender.com 
+🔗 **https://task-sync.com**
 
 
 ## 🎯 プロジェクト概要
@@ -59,9 +57,12 @@ Trello を参考にしたカンバン方式の UI でドラッグ＆ドロップ
 - **JWT** - 認証トークン
 
 ### インフラ・デプロイ
-- **Render** - バックエンド・フロントエンドホスティング
-- **Supabase** - PostgreSQLデータベース（本番環境）
-- **Docker** - ローカル開発環境
+- **AWS CloudFront** - CDN・エントリーポイント（フロントエンド配信 + APIルーティング）
+- **AWS S3** - フロントエンド静的ファイルホスティング
+- **AWS ALB** - ロードバランサー（CloudFront → EC2）
+- **AWS EC2** - バックエンドサーバー（Daphne + Docker）
+- **AWS RDS** - PostgreSQLデータベース（本番環境）
+- **Docker** - ローカル開発・本番環境
 
 ## 📋 主な機能
 
@@ -301,9 +302,9 @@ npm start
    SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
    ```
 
-   **Render本番環境:**
-   - Renderダッシュボード → Environment → Environment Variables
-   - `SLACK_WEBHOOK_URL` を追加
+   **AWS本番環境:**
+   - EC2の`.env`ファイルに`SLACK_WEBHOOK_URL=<取得したURL>`を追記
+   - `docker-compose restart backend` で反映
 
 3. **セキュリティ注意事項:**
    - ⚠️ Webhook URLは絶対に公開リポジトリにコミットしないこと
@@ -312,72 +313,79 @@ npm start
    - 無効化された場合は、上記手順で再度Webhook URLを取得してください
 
 
-## 🚀 デプロイ（Render + Supabase）
+## 🚀 デプロイ（AWS）
 
-### 1. Supabase PostgreSQLの準備
+本番環境はAWSで構築しています。
 
-1. [Supabase](https://supabase.com/)でプロジェクトを作成
-2. `Settings` → `Database` から接続情報を取得
-3. `DATABASE_URL`をコピー（`postgresql://[user]:[password]@[host]:[port]/[database]`形式）
+### インフラ構成
 
-### 2. Renderへのデプロイ
+```
+ユーザー
+  │
+  ▼
+CloudFront (task-sync.com)
+  ├── /* (デフォルト)  →  S3（React静的ファイル）
+  ├── /api/*          →  ALB → EC2:8000（Django REST API）
+  └── /ws/*           →  ALB → EC2:8000（Django Channels WebSocket）
+                              │
+                              ▼
+                           RDS PostgreSQL (tasksync-db)
+```
 
-#### バックエンド（Web Service）
+### 環境変数（EC2の`.env`）
 
-1. [Render](https://render.com/)にログイン
-2. 「New +」→「Web Service」を選択
-3. GitHubリポジトリを連携
-4. 以下の設定を入力：
-   - **Name**: `tasksync-backend`
-   - **Region**: `Oregon (US West)`
-   - **Branch**: `main`
-   - **Root Directory**: `backend`
-   - **Runtime**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate`
-   - **Start Command**: `daphne -b 0.0.0.0 -p $PORT core.asgi:application`
+```
+SECRET_KEY=<ランダムな文字列>
+DEBUG=False
+DATABASE_URL=postgresql://postgres:<password>@<rds-endpoint>:5432/tasksync
+ALLOWED_HOSTS=<ALBのドメイン>,<EC2のIP>,<CloudFrontのドメイン>
+CORS_ALLOWED_ORIGINS=https://task-sync.com
+SLACK_WEBHOOK_URL=<SlackのWebhook URL（任意）>
+```
 
-5. 環境変数を設定：
-   ```
-   DATABASE_URL=<Supabaseから取得したURL>
-   SECRET_KEY=<ランダムな文字列>
-   DEBUG=False
-   ALLOWED_HOSTS=<デプロイ後のバックエンドURL>
-   CORS_ALLOWED_ORIGINS=<デプロイ後のフロントエンドURL>
-   SLACK_WEBHOOK_URL=<SlackのWebhook URL（任意）>
-   ```
+### デプロイ手順
 
-   **⚠️ セキュリティ注意:**
-   - `SLACK_WEBHOOK_URL`は必ず環境変数で設定し、公開リポジトリにコミットしないでください
-   - Slack Webhook URLの取得方法:
-     1. [Slack API](https://api.slack.com/apps)にアクセス
-     2. アプリを作成または既存のアプリを選択
-     3. 「Incoming Webhooks」を有効化
-     4. 「Add New Webhook to Workspace」をクリック
-     5. 通知先のチャンネルを選択
-     6. 生成されたWebhook URLを環境変数に設定
-
-6. 「Create Web Service」をクリック
-
-#### フロントエンド（Static Site）
-
-1. 「New +」→「Static Site」を選択
-2. 同じリポジトリを選択
-3. 以下の設定を入力：
-   - **Name**: `tasksync-frontend`
-   - **Branch**: `main`
-   - **Root Directory**: `frontend`
-   - **Build Command**: `npm install && npm run build`
-   - **Publish Directory**: `build`
-
-4. `frontend/src/api.js`のAPIエンドポイントをバックエンドのURLに更新
-5. 「Create Static Site」をクリック
-
-### 3. 初回セットアップ
-
-デプロイ後、Renderのコンソールから以下を実行：
+#### バックエンド（EC2）
 
 ```bash
-python manage.py createsuperuser
+# EC2にSSH接続
+ssh -i <your-key.pem> ec2-user@<EC2のIP>
+
+# リポジトリのクローン（初回のみ）
+git clone <repository-url>
+cd realtime-task-app
+
+# .envファイルを作成
+cp .env.example .env
+# .envを編集して環境変数を設定
+
+# コンテナを起動
+docker-compose up -d --build
+
+# マイグレーション・デモユーザー作成（初回のみ）
+docker-compose exec backend python manage.py migrate
+docker-compose exec backend python manage.py create_demo_users
+```
+
+#### 更新デプロイ
+
+```bash
+git pull origin main
+docker-compose up -d --build
+```
+
+#### フロントエンド（S3 + CloudFront）
+
+```bash
+cd frontend
+npm install
+npm run build
+
+# S3バケットにアップロード
+aws s3 sync build/ s3://<your-bucket-name> --delete
+
+# CloudFrontキャッシュを削除
+aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "/*"
 ```
 
 ## 📊 データベース設計
@@ -408,7 +416,8 @@ python manage.py createsuperuser
 - `POST /api/tasks/reorder/` - タスク並び替え
 
 ### WebSocket
-- `ws://localhost:8000/ws/tasks/` - リアルタイム通信
+- `wss://task-sync.com/ws/tasks/` - リアルタイム通信（本番）
+- `ws://localhost:8000/ws/tasks/` - リアルタイム通信（ローカル）
 
 ## 💡 技術的な工夫点
 
