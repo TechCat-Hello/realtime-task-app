@@ -40,6 +40,13 @@ Trello を参考にしたカンバン方式の UI でドラッグ＆ドロップ
 > 💻 **開発者向け**: 新規登録機能を有効化したい場合は、`frontend/src/Login.js` 内のコメントアウトを解除してください。
 
 
+## 🏗 インフラ構成
+
+![TaskSync AWS構成図](docs/architecture-diagram.svg)
+
+CloudFrontを単一のエントリーポイントとして、静的配信(S3)とAPI/WebSocket通信(ALB → EC2 → RDS)をルーティングしています。環境変数やデプロイ手順など詳細は後述の「デプロイ(AWS)」セクションを参照してください。
+
+
 ## 🛠 技術スタック
 
 ### フロントエンド
@@ -70,6 +77,7 @@ Trello を参考にしたカンバン方式の UI でドラッグ＆ドロップ
 - JWTトークンによるセキュアな認証
 - アクセストークンの自動更新（リフレッシュトークン）
 - **管理者/一般ユーザーの権限管理**
+- **パスワードリセット機能**（登録済みメールアドレスに再設定用リンクを送信し、リンク経由で新しいパスワードを設定。リンクには有効期限があり、1度使用すると失効）
 
 ### 2. タスク管理
 - **タスクの作成・編集・削除**
@@ -180,11 +188,12 @@ To Do、In Progress、Doneの3つのステータスでタスクを管理でき�
 │   ├── package.json       # Node.js dependencies
 │   └── .gitignore
 ├── docs/
-│   └── screenshots/       # README screenshots
+│   ├── screenshots/               # README screenshots
+│   └── architecture-diagram.svg   # AWS構成図(README掲載用)
 ├── docker-compose.yml     # Docker Compose configuration
 ├── .env.example           # Environment variables template (local/Docker)
 ├── .gitignore             # Git ignore rules
-├── render.yaml            # Render deployment configuration
+├── render.yaml            # 旧Render構成（AWS移行前の記録として保持）
 ├── LICENSE                # MIT License
 └── README.md              # This file
 ```
@@ -315,22 +324,9 @@ npm start
 
 ## 🚀 デプロイ（AWS）
 
-本番環境はAWSで構築しています。
+本番環境はAWSで構築しています。構成図は上部の「🏗 インフラ構成」セクションをご覧ください。
 
-### インフラ構成
-
-```
-ユーザー
-  │
-  ▼
-CloudFront (task-sync.com)
-  ├── /* (デフォルト)  →  S3（React静的ファイル）
-  ├── /api/*          →  ALB → EC2:8000（Django REST API）
-  └── /ws/*           →  ALB → EC2:8000（Django Channels WebSocket）
-                              │
-                              ▼
-                           RDS PostgreSQL (tasksync-db)
-```
+> 📜 **移行の経緯**: 当初はRender + Supabaseで構築していましたが、インフラ構築スキルの習得を目的にAWS（EC2 + RDS + ALB + CloudFront + S3）へ移行しました。当時の構成は`render.yaml`にそのまま残しています。
 
 ### 環境変数（EC2の`.env`）
 
@@ -341,6 +337,11 @@ DATABASE_URL=postgresql://postgres:<password>@<rds-endpoint>:5432/tasksync
 ALLOWED_HOSTS=<ALBのドメイン>,<EC2のIP>,<CloudFrontのドメイン>
 CORS_ALLOWED_ORIGINS=https://task-sync.com
 SLACK_WEBHOOK_URL=<SlackのWebhook URL（任意）>
+FRONTEND_URL=https://task-sync.com
+EMAIL_HOST=<SESのSMTPエンドポイント（任意、パスワードリセット用）>
+EMAIL_HOST_USER=<SESのSMTPユーザー名>
+EMAIL_HOST_PASSWORD=<SESのSMTPパスワード>
+DEFAULT_FROM_EMAIL=no-reply@task-sync.com
 ```
 
 ### デプロイ手順
@@ -391,7 +392,7 @@ aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "
 ## 📊 データベース設計
 
 ### Taskモデル
-```python
+```
 - id: 主キー
 - title: タスク名
 - description: タスク説明（任意）
@@ -407,6 +408,10 @@ aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "
 ### 認証
 - `POST /api/token/` - ログイン（トークン取得）
 - `POST /api/token/refresh/` - トークン更新
+- `POST /api/register/` - 新規登録（本番環境では無効化中）
+- `GET /api/me/` - ログイン中ユーザー情報の取得
+- `POST /api/forgot-password/` - パスワードリセット申請（登録済みメールアドレスに再設定用リンクを送信）
+- `POST /api/reset-password/` - パスワードリセット実行（メール内のリンクに含まれるuid・tokenを検証）
 
 ### タスク操作
 - `GET /api/tasks/` - タスク一覧取得
@@ -414,6 +419,9 @@ aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "
 - `PUT /api/tasks/{id}/` - タスク更新
 - `DELETE /api/tasks/{id}/` - タスク削除
 - `POST /api/tasks/reorder/` - タスク並び替え
+
+### その他
+- `GET /api/health/` - ALBヘルスチェック用エンドポイント（認証不要）
 
 ### WebSocket
 - `wss://task-sync.com/ws/tasks/` - リアルタイム通信（本番）

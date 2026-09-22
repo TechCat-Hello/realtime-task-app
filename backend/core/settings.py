@@ -202,3 +202,20 @@ if os.getenv('CSRF_TRUSTED_ORIGINS'):
 
 SECURE_SSL_REDIRECT = False
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Email (used for password reset). Falls back to printing to the console when
+# EMAIL_HOST isn't set, so local development works without any mail setup.
+EMAIL_BACKEND = (
+    'django.core.mail.backends.smtp.EmailBackend'
+    if os.getenv('EMAIL_HOST')
+    else 'django.core.mail.backends.console.EmailBackend'
+)
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@task-sync.com')
+
+# Base URL of the frontend, used to build the password reset link sent by email
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
