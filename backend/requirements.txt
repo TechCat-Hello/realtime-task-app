@@ -8,8 +8,8 @@ djangorestframework_simplejwt==5.5.1
 psycopg2-binary==2.9.11
 PyJWT==2.15.1
 python-dotenv==1.2.2
-requests==2.32.4
-sqlparse==0.5.4
+requests==2.33.0
+sqlparse==0.6.0
 typing_extensions==4.15.0
 pytest==9.0.3
 pytest-django==4.14.0
