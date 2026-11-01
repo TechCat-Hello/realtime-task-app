@@ -25,6 +25,21 @@ def pytest_configure(config=None):
         pass
 
 
+@pytest.fixture(autouse=True)
+def reset_throttle_state():
+    """Keep rate-limit counters from leaking between tests.
+
+    DRF stores throttle history in the default cache, so without this a test
+    would start part-way through another test's allowance and fail depending
+    on execution order.
+    """
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()
+
+
 @pytest.fixture
 def api_client():
     return APIClient()

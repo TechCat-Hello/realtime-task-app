@@ -1,21 +1,61 @@
 from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.http import HttpResponse
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth.tokens import default_token_generator
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import SimpleRateThrottle
 from rest_framework import status
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
+
+class ClientIPRateThrottle(SimpleRateThrottle):
+    """Rate limit by client IP, whether or not the caller is authenticated.
+
+    DRF's built-in AnonRateThrottle stops applying once a request carries
+    credentials, which is the wrong behaviour for endpoints that are meant to
+    be reachable without logging in. get_ident() honours REST_FRAMEWORK's
+    NUM_PROXIES, so the IP is the real client rather than the load balancer.
+    """
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {
+            "scope": self.scope,
+            "ident": self.get_ident(request),
+        }
+
+
+class LoginRateThrottle(ClientIPRateThrottle):
+    scope = "login"
+
+
+class RegisterRateThrottle(ClientIPRateThrottle):
+    scope = "register"
+
+
+class PasswordResetRateThrottle(ClientIPRateThrottle):
+    """Guards the endpoints that send mail.
+
+    Without this, anyone can make the app send unlimited reset mail to an
+    address they don't own: that floods the victim's inbox, burns the SES
+    daily quota, and pushes the bounce/complaint rate towards a sending
+    suspension.
+    """
+
+    scope = "password_reset"
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class CustomTokenObtainPairView(TokenObtainPairView):
-    pass
+    throttle_classes = [LoginRateThrottle]
 
 def home(request):
     return HttpResponse("Task Management API - Backend is running")
@@ -37,6 +77,7 @@ def current_user(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([RegisterRateThrottle])
 def register(request):
     """Create a new user. Expects JSON: {username, email, password}."""
     username = request.data.get("username")
@@ -52,6 +93,13 @@ def register(request):
     if User.objects.filter(email=email).exists():
         return Response({"error": "email already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # AUTH_PASSWORD_VALIDATORS only runs through Django's forms, so an API that
+    # calls create_user() directly would otherwise accept any password at all.
+    try:
+        validate_password(password, user=User(username=username, email=email))
+    except ValidationError as exc:
+        return Response({"error": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
+
     user = User.objects.create_user(username=username, email=email, password=password)
     return Response({"id": user.id, "username": user.username, "email": user.email}, status=status.HTTP_201_CREATED)
 
@@ -60,6 +108,7 @@ RESET_SENT_MESSAGE = "登録されているメールアドレスの場合、パ�
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([PasswordResetRateThrottle])
 def forgot_password(request):
     """Request password reset. Expects JSON: {email}.
 
@@ -96,13 +145,14 @@ def forgot_password(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([PasswordResetRateThrottle])
 def reset_password(request):
     """Reset a password using the uid/token issued by forgot_password.
 
     The token is tied to the user's current password hash (via Django's
     default_token_generator), so it stops working as soon as it's used once
     or the password otherwise changes, and it expires automatically after
-    PASSWORD_RESET_TIMEOUT (3 days by default).
+    PASSWORD_RESET_TIMEOUT (1 hour, see settings).
     """
     uid = request.data.get("uid")
     token = request.data.get("token")
@@ -125,6 +175,13 @@ def reset_password(request):
             {"error": "リンクの有効期限が切れているか、無効です"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    # Checked after the token so an invalid link never reveals anything about
+    # the account, and so a valid link can't be used to set a trivial password.
+    try:
+        validate_password(new_password, user=user)
+    except ValidationError as exc:
+        return Response({"error": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
 
     user.set_password(new_password)
     user.save()

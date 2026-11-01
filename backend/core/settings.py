@@ -85,11 +85,26 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    # 未認証で叩ける入口だけを対象にレート制限をかける。
+    # 実際の適用は各ビューの throttle_classes で行うため、
+    # ここでは利用するレートの定義のみを持つ。
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "10/min",
+        "register": "5/hour",
+        "password_reset": "5/hour",
+    },
+    # 本番の経路は CloudFront -> ALB -> Django の2段プロキシ。
+    # これを指定しないと送信元が常に ALB の IP になり、
+    # レート制限がクライアント単位ではなくサイト全体で1つになってしまう。
+    "NUM_PROXIES": 2,
 }
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
 }
+
+# パスワード再設定リンクの有効期限。Django のデフォルトは3日と長いため1時間に短縮する。
+PASSWORD_RESET_TIMEOUT = 60 * 60
 
 TEMPLATES = [
     {
