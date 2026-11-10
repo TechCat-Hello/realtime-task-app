@@ -3,6 +3,9 @@ version: '3.8'
 services:
   db:
     image: postgres:15
+    # ホストを再起動しても Docker が自分でコンテナを戻す。
+    # 明示的に docker-compose stop/down したときだけ止まったままになる。
+    restart: unless-stopped
     environment:
       POSTGRES_DB: rt_tasks
       POSTGRES_USER: rt_user
@@ -15,6 +18,7 @@ services:
   backend:
     build:
       context: ./backend
+    restart: unless-stopped
     command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
 
     volumes:
